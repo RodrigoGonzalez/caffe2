@@ -47,8 +47,7 @@ class TestExtendTensorOp(TestCase):
         workspace.RunOperatorOnce(extend_tensor_op)
 
         ones_counts = np.array([1], dtype=np.float32)
-        ones_indices = np.array(
-            [1 for i in range(len(indices))], dtype=np.float32)
+        ones_indices = np.array([1 for _ in range(len(indices))], dtype=np.float32)
         one = np.array([1], dtype=np.float32)
         workspace.FeedBlob('ones_counts', ones_counts)
         workspace.FeedBlob('ones_indices', ones_indices)

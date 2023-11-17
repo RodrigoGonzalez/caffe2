@@ -167,7 +167,7 @@ def processor_name(processor):
         if processor.func_name == '<lambda>':
             return processor.__module__
         if hasattr(processor, 'im_class'):
-            return '%s.%s' % (processor.im_class.__name__, processor.func_name)
+            return f'{processor.im_class.__name__}.{processor.func_name}'
         return processor.func_name
     return processor.__class__.__name__
 
@@ -194,9 +194,9 @@ def _pipe_step(
     if name is None and processor is not None:
         name = processor_name(processor)
     if name is None and output is not None:
-        name = 'pipe_into:%s' % processor_name(output)
+        name = f'pipe_into:{processor_name(output)}'
     if name is None:
-        name = 'pipe_from:%s' % processor_name(input)
+        name = f'pipe_from:{processor_name(input)}'
 
     node_name = str(Node.current())
     profiler_name = "{0}/{1}/{2}/{3}/{4}".format(
@@ -316,7 +316,7 @@ class NetProcessor(object):
 
     def __call__(self, rec):
         assert not self._frozen
-        prefix = NetBuilder.current().name + '/'
+        prefix = f'{NetBuilder.current().name}/'
         blob_remap = {}
         for net in self.thread_init_nets:
             new_net, _ = core.clone_and_bind_net(

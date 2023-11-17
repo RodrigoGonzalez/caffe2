@@ -37,7 +37,7 @@ def prepare_batch(batch):
     encoder_lengths = [len(entry[0]) for entry in batch]
     max_encoder_length = max(encoder_lengths)
     decoder_lengths = []
-    max_decoder_length = max([len(entry[1]) for entry in batch])
+    max_decoder_length = max(len(entry[1]) for entry in batch)
 
     batch_encoder_inputs = []
     batch_decoder_inputs = []
@@ -196,22 +196,20 @@ class Seq2SeqModelCaffe2:
 
     def model_build_fun(self, model, forward_only=False, loss_scale=None):
         encoder_inputs = model.net.AddExternalInput(
-            workspace.GetNameScope() + 'encoder_inputs',
+            f'{workspace.GetNameScope()}encoder_inputs'
         )
         encoder_lengths = model.net.AddExternalInput(
-            workspace.GetNameScope() + 'encoder_lengths',
+            f'{workspace.GetNameScope()}encoder_lengths'
         )
         decoder_inputs = model.net.AddExternalInput(
-            workspace.GetNameScope() + 'decoder_inputs',
+            f'{workspace.GetNameScope()}decoder_inputs'
         )
         decoder_lengths = model.net.AddExternalInput(
-            workspace.GetNameScope() + 'decoder_lengths',
+            f'{workspace.GetNameScope()}decoder_lengths'
         )
-        targets = model.net.AddExternalInput(
-            workspace.GetNameScope() + 'targets',
-        )
+        targets = model.net.AddExternalInput(f'{workspace.GetNameScope()}targets')
         target_weights = model.net.AddExternalInput(
-            workspace.GetNameScope() + 'target_weights',
+            f'{workspace.GetNameScope()}target_weights'
         )
         attention_type = self.model_params['attention']
         assert attention_type in ['none', 'regular']
@@ -375,14 +373,8 @@ class Seq2SeqModelCaffe2:
                         core.GradientSlice,
                     ) else model.param_to_grad[param].values
                 )
-                grad_squared = model.net.Sqr(
-                    [grad],
-                    'grad_{}_squared'.format(i),
-                )
-                grad_squared_sum = model.net.SumElements(
-                    grad_squared,
-                    'grad_{}_squared_sum'.format(i),
-                )
+                grad_squared = model.net.Sqr([grad], f'grad_{i}_squared')
+                grad_squared_sum = model.net.SumElements(grad_squared, f'grad_{i}_squared_sum')
                 grad_squared_sums.append(grad_squared_sum)
 
             grad_squared_full_sum = model.net.Sum(
@@ -404,11 +396,10 @@ class Seq2SeqModelCaffe2:
                 [global_norm, clip_norm],
                 'max_norm',
             )
-            norm_ratio = model.net.Div(
+            return model.net.Div(
                 [clip_norm, max_norm],
                 'norm_ratio',
             )
-            return norm_ratio
 
     def _apply_norm_ratio(
         self, norm_ratio, model, params, learning_rate, scope, ONE
@@ -504,13 +495,12 @@ class Seq2SeqModelCaffe2:
     def total_loss_scalar(self):
         if self.num_gpus == 0:
             return workspace.FetchBlob('total_loss_scalar')
-        else:
-            total_loss = 0
-            for i in range(self.num_gpus):
-                name = 'gpu_{}/total_loss_scalar'.format(i)
-                gpu_loss = workspace.FetchBlob(name)
-                total_loss += gpu_loss
-            return total_loss
+        total_loss = 0
+        for i in range(self.num_gpus):
+            name = f'gpu_{i}/total_loss_scalar'
+            gpu_loss = workspace.FetchBlob(name)
+            total_loss += gpu_loss
+        return total_loss
 
     def _init_model(self):
         workspace.RunNetOnce(self.model.param_init_net)
@@ -541,16 +531,15 @@ class Seq2SeqModelCaffe2:
         self.num_cpus = num_cpus
         self.batch_size = model_params['batch_size']
 
-        workspace.GlobalInit([
-            'caffe2',
-            # NOTE: modify log level for debugging purposes
-            '--caffe2_log_level=0',
-            # NOTE: modify log level for debugging purposes
-            '--v=0',
-            # Fail gracefully if one of the threads fails
-            '--caffe2_handle_executor_threads_exceptions=1',
-            '--caffe2_mkl_num_threads=' + str(self.num_cpus),
-        ])
+        workspace.GlobalInit(
+            [
+                'caffe2',
+                '--caffe2_log_level=0',
+                '--v=0',
+                '--caffe2_handle_executor_threads_exceptions=1',
+                f'--caffe2_mkl_num_threads={str(self.num_cpus)}',
+            ]
+        )
 
     def __enter__(self):
         return self
@@ -593,7 +582,7 @@ class Seq2SeqModelCaffe2:
                     Batch._fields,
                     batch_obj,
                 ):
-                    name = 'gpu_{}/{}'.format(i, batch_obj_name)
+                    name = f'gpu_{i}/{batch_obj_name}'
                     if batch_obj_name in ['encoder_inputs', 'decoder_inputs']:
                         dev = core.DeviceOption(caffe2_pb2.CPU)
                     else:
@@ -662,43 +651,45 @@ def run_seq2seq_model(args, model_params=None):
         args.target_corpus,
         args.unk_threshold,
     )
-    logger.info('Source vocab size {}'.format(len(source_vocab)))
-    logger.info('Target vocab size {}'.format(len(target_vocab)))
+    logger.info(f'Source vocab size {len(source_vocab)}')
+    logger.info(f'Target vocab size {len(target_vocab)}')
 
     batches = gen_batches(args.source_corpus, args.target_corpus, source_vocab,
                           target_vocab, model_params['batch_size'],
                           args.max_length)
-    logger.info('Number of training batches {}'.format(len(batches)))
+    logger.info(f'Number of training batches {len(batches)}')
 
     batches_eval = gen_batches(args.source_corpus_eval, args.target_corpus_eval,
                                source_vocab, target_vocab,
                                model_params['batch_size'], args.max_length)
-    logger.info('Number of eval batches {}'.format(len(batches_eval)))
+    logger.info(f'Number of eval batches {len(batches_eval)}')
 
     with Seq2SeqModelCaffe2(
-        model_params=model_params,
-        source_vocab_size=len(source_vocab),
-        target_vocab_size=len(target_vocab),
-        num_gpus=args.num_gpus,
-        num_cpus=20,
-    ) as model_obj:
+            model_params=model_params,
+            source_vocab_size=len(source_vocab),
+            target_vocab_size=len(target_vocab),
+            num_gpus=args.num_gpus,
+            num_cpus=20,
+        ) as model_obj:
         model_obj.initialize_from_scratch()
         for i in range(args.epochs):
-            logger.info('Epoch {}'.format(i))
-            total_loss = 0
-            for batch in batches:
-                total_loss += model_obj.step(
+            logger.info(f'Epoch {i}')
+            total_loss = sum(
+                model_obj.step(
                     batch=batch,
                     forward_only=False,
                 )
-            logger.info('\ttraining loss {}'.format(total_loss))
-            total_loss = 0
-            for batch in batches_eval:
-                total_loss += model_obj.step(
+                for batch in batches
+            )
+            logger.info(f'\ttraining loss {total_loss}')
+            total_loss = sum(
+                model_obj.step(
                     batch=batch,
                     forward_only=False,
                 )
-            logger.info('\teval loss {}'.format(total_loss))
+                for batch in batches_eval
+            )
+            logger.info(f'\teval loss {total_loss}')
             if args.checkpoint is not None:
                 checkpoint_path = '{0}-{1}'.format(args.checkpoint, i)
                 assert workspace.RunOperatorOnce(core.CreateOperator(
@@ -709,7 +700,7 @@ def run_seq2seq_model(args, model_params=None):
                     db=checkpoint_path,
                     db_type='minidb',
                 ))
-                logger.info('Model saved to ' + checkpoint_path)
+                logger.info(f'Model saved to {checkpoint_path}')
 
 
 def main():

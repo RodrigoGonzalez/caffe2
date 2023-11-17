@@ -15,7 +15,7 @@ class AttentionType:
 def s(scope, name):
     # We have to manually scope due to our internal/external blob
     # relationships.
-    return "{}/{}".format(str(scope), str(name))
+    return f"{str(scope)}/{str(name)}"
 
 
 # c_i = \sum_j w_{ij}\textbf{s}_j
@@ -49,17 +49,13 @@ def _calc_attention_weights(
     attention_logits_transposed,
     scope,
 ):
-    # TODO: we could try to force some attention weights to be zeros,
-    # based on encoder_lengths.
-    # [batch_size, encoder_length, 1]
-    attention_weights_3d = brew.softmax(
+    return brew.softmax(
         model,
         attention_logits_transposed,
         s(scope, 'attention_weights_3d'),
         engine='CUDNN',
         axis=1,
     )
-    return attention_weights_3d
 
 
 # e_{ij} = \textbf{v}^T tanh \alpha(\textbf{h}_{i-1}, \textbf{s}_j)
@@ -95,13 +91,11 @@ def _calc_attention_logits_from_sum_match(
         [s(scope, 'attention_logits')],
         axis=2,
     )
-    # [batch_size, encoder_length, 1]
-    attention_logits_transposed = model.Transpose(
+    return model.Transpose(
         attention_logits,
         s(scope, 'attention_logits_transposed'),
         axes=[1, 0, 2],
     )
-    return attention_logits_transposed
 
 
 # \textbf{W}^\alpha used in the context of \alpha_{sum}(a,b)

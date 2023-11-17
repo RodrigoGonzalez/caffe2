@@ -75,7 +75,7 @@ class Functional(ModelLayer):
                 elif shapes[blob][0] == 0:
                     shape = tuple(shapes[blob][1:])
                 else:
-                    logger.warning("unexpeced shape: {}".format(shapes[blob]))
+                    logger.warning(f"unexpeced shape: {shapes[blob]}")
                     # If batch dimension is not first - give up on shape
                     # inference for that blob
                     had_issues = True
@@ -99,8 +99,7 @@ class Functional(ModelLayer):
             logger.warning(str(ex))
 
         if had_issues:
-            logger.warning(
-                "Type inference had problems for layer: {}".format(self.name))
+            logger.warning(f"Type inference had problems for layer: {self.name}")
 
     def add_ops(self, net):
         self._function(

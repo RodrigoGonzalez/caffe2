@@ -58,9 +58,8 @@ class Seq2SeqModelHelper(CNNModelHelper):
         '''
         if namescope is None:
             namescope = scope.CurrentNameScope()
-        else:
-            if not namescope.endswith(scope._NAMESCOPE_SEPARATOR):
-                namescope += scope._NAMESCOPE_SEPARATOR
+        elif not namescope.endswith(scope._NAMESCOPE_SEPARATOR):
+            namescope += scope._NAMESCOPE_SEPARATOR
 
         if namescope == '':
             return self.non_trainable_params[:]

@@ -64,7 +64,7 @@ class TestCase(hu.HypothesisTestCase):
             procs.append(proc)
 
         # Test complete, join background processes
-        while len(procs) > 0:
+        while procs:
             proc = procs.pop(0)
             while proc.is_alive():
                 proc.join(1)
@@ -99,9 +99,11 @@ class TestCase(hu.HypothesisTestCase):
                     "RedisStoreHandlerCreate",
                     [],
                     [store_handler],
-                    prefix=str(TestCase.test_counter) + "/",
+                    prefix=f"{str(TestCase.test_counter)}/",
                     host=redis_host,
-                    port=redis_port))
+                    port=redis_port,
+                )
+            )
         else:
             workspace.RunOperatorOnce(
                 core.CreateOperator(
@@ -124,7 +126,7 @@ class TestCase(hu.HypothesisTestCase):
 
     def synchronize(self, store_handler, value, comm_rank=None):
         TestCase.sync_counter += 1
-        blob = "sync_{}".format(TestCase.sync_counter)
+        blob = f"sync_{TestCase.sync_counter}"
         if comm_rank == 0:
             workspace.FeedBlob(blob, pickle.dumps(value))
             workspace.RunOperatorOnce(
@@ -166,7 +168,7 @@ class TestCase(hu.HypothesisTestCase):
         for i in range(comm_size):
             blobs = []
             for j in range(num_blobs):
-                blob = "blob_{}".format(j)
+                blob = f"blob_{j}"
                 offset = (comm_rank * num_blobs) + j
                 value = np.full(blob_size, offset,
                                 np.float16 if use_float16 else np.float32)
@@ -244,7 +246,7 @@ class TestCase(hu.HypothesisTestCase):
 
         blobs = []
         for i in range(num_blobs):
-            blob = "blob_{}".format(i)
+            blob = f"blob_{i}"
             value = np.full(blob_size, (comm_rank * num_blobs) + i,
                             np.float16 if use_float16 else np.float32)
             workspace.FeedBlob(blob, value)

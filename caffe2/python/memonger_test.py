@@ -164,14 +164,14 @@ class MemongerTest(hu.HypothesisTestCase):
             fc4 = m.FC(fc3, "fc4", dim_in=output_dim, dim_out=output_dim)
             fc5 = m.FC(fc4, "fc5", dim_in=output_dim, dim_out=output_dim)
             fc5.Relu([], fc5) \
-               .Softmax([], "pred1") \
-               .LabelCrossEntropy(["label"], ["xent1"]) \
-               .AveragedLoss([], "loss1")
+                   .Softmax([], "pred1") \
+                   .LabelCrossEntropy(["label"], ["xent1"]) \
+                   .AveragedLoss([], "loss1")
             fc6 = m.FC(fc5, "fc6", dim_in=output_dim, dim_out=output_dim)
             fc6.Relu([], fc6) \
-               .Softmax([], "pred2") \
-               .LabelCrossEntropy(["label"], ["xent2"]) \
-               .AveragedLoss([], "loss2")
+                   .Softmax([], "pred2") \
+                   .LabelCrossEntropy(["label"], ["xent2"]) \
+                   .AveragedLoss([], "loss2")
         input_to_grad = m.AddGradientOperators(["name_x/loss1", "name_x/loss2"])
 
         blobs_before = count_blobs(m.net.Proto())
@@ -179,9 +179,9 @@ class MemongerTest(hu.HypothesisTestCase):
             m.net,
             ["name_x/loss1", "name_x/loss2"],
             set(m.param_to_grad.values()),
-            "name_x",  # "name_x//shared_gradinp_0_shared" if using "name_x/"
+            "name_x",
             share_activations=True,
-            dont_share_blobs=set(['name_x/fc6', 'name_x/fc5']),
+            dont_share_blobs={'name_x/fc6', 'name_x/fc5'},
         )
         blobs_after = count_blobs(optim_proto)
         self.assertLess(blobs_after, blobs_before)

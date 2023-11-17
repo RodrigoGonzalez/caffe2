@@ -68,16 +68,15 @@ def _GetFreeFlaskPort():
     result = sock.connect_ex(('127.0.0.1', 5000))
     if result == 0:
         return 5000
-    else:
-        s = socket.socket()
-        s.bind(('', 0))
-        port = s.getsockname()[1]
-        s.close()
-        # Race condition: between the interval we close the socket and actually
-        # start a mint process, another process might have occupied the port. We
-        # don't do much here as this is mostly for convenience in research
-        # rather than 24x7 service.
-        return port
+    s = socket.socket()
+    s.bind(('', 0))
+    port = s.getsockname()[1]
+    s.close()
+    # Race condition: between the interval we close the socket and actually
+    # start a mint process, another process might have occupied the port. We
+    # don't do much here as this is mostly for convenience in research
+    # rather than 24x7 service.
+    return port
 
 
 def StartMint(root_folder=None, port=None):
@@ -100,7 +99,7 @@ def StartMint(root_folder=None, port=None):
         )
     )
     process.start()
-    print('Mint running at http://{}:{}'.format(socket.getfqdn(), port))
+    print(f'Mint running at http://{socket.getfqdn()}:{port}')
     return process
 
 
@@ -117,26 +116,25 @@ def StringifyProto(obj):
   """
     if isinstance(obj, basestring):
         return obj
+    if isinstance(obj, Message):
+        # First, see if this object is a protocol buffer, which we can
+        # simply serialize with the SerializeToString() call.
+        return obj.SerializeToString()
+    elif hasattr(obj, 'Proto'):
+        return obj.Proto().SerializeToString()
     else:
-        if isinstance(obj, Message):
-            # First, see if this object is a protocol buffer, which we can
-            # simply serialize with the SerializeToString() call.
-            return obj.SerializeToString()
-        elif hasattr(obj, 'Proto'):
-            return obj.Proto().SerializeToString()
-        else:
-            raise ValueError("Unexpected argument to StringifyProto of type " +
-                             type(obj).__name__)
+        raise ValueError(
+            f"Unexpected argument to StringifyProto of type {type(obj).__name__}"
+        )
 
 
 def ResetWorkspace(root_folder=None):
     if root_folder is None:
         # Reset the workspace, but keep the current root folder setting.
         return C.reset_workspace(C.root_folder())
-    else:
-        if not os.path.exists(root_folder):
-            os.makedirs(root_folder)
-        return C.reset_workspace(root_folder)
+    if not os.path.exists(root_folder):
+        os.makedirs(root_folder)
+    return C.reset_workspace(root_folder)
 
 
 def CreateNet(net, overwrite=False, input_blobs=None):
@@ -216,8 +214,9 @@ def InferShapesAndTypes(nets, blob_dimensions=None):
 def _StringifyName(name, expected_type):
     if isinstance(name, basestring):
         return name
-    assert type(name).__name__ == expected_type, \
-        "Expected a string or %s" % expected_type
+    assert (
+        type(name).__name__ == expected_type
+    ), f"Expected a string or {expected_type}"
     return str(name)
 
 
@@ -252,10 +251,14 @@ def FeedBlob(name, arr, device_option=None):
     if device_option and device_option.device_type == caffe2_pb2.CUDA:
         if arr.dtype == np.dtype('float64'):
             logger.warning(
-                "CUDA operators do not support 64-bit doubles, " +
-                "please use arr.astype(np.float32) or np.int32 for ints." +
-                " Blob: {}".format(name) +
-                " type: {}".format(str(arr.dtype))
+                (
+                    (
+                        "CUDA operators do not support 64-bit doubles, "
+                        + "please use arr.astype(np.float32) or np.int32 for ints."
+                        + f" Blob: {name}"
+                    )
+                    + f" type: {str(arr.dtype)}"
+                )
             )
 
     name = StringifyBlobName(name)
@@ -453,8 +456,7 @@ def _Workspace_run(ws, obj):
         return ws._run_net(obj.SerializeToString())
     if isinstance(obj, caffe2_pb2.OperatorDef):
         return ws._run_operator(obj.SerializeToString())
-    raise ValueError(
-        "Don't know how to do Workspace.run() on {}".format(type(obj)))
+    raise ValueError(f"Don't know how to do Workspace.run() on {type(obj)}")
 
 
 C.Workspace.run = _Workspace_run

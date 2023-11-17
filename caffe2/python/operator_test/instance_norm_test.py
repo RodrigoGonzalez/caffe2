@@ -21,7 +21,7 @@ class TestInstanceNorm(hu.HypothesisTestCase):
             input_data = np.random.rand(N, C, H, W).astype(np.float32)
             input_data = np.transpose(input_data, axes=(0, 2, 3, 1))
         else:
-            raise Exception('unknown order type ({})'.format(order))
+            raise Exception(f'unknown order type ({order})')
 
         scale_data = np.random.rand(C).astype(np.float32)
         bias_data = np.random.rand(C).astype(np.float32)
@@ -34,14 +34,14 @@ class TestInstanceNorm(hu.HypothesisTestCase):
             outputs += ['mean']
         if store_inv_stdev:
             outputs += ['inv_stdev']
-        op = core.CreateOperator(
+        return core.CreateOperator(
             'InstanceNorm',
             ['input', 'scale', 'bias'],
             outputs,
             order=order,
             epsilon=epsilon,
-            device_option=device_option)
-        return op
+            device_option=device_option,
+        )
 
     def _feed_inputs(self, input_blobs, device_option):
         names = ['input', 'scale', 'bias']

@@ -118,7 +118,7 @@ def _test_reshape(old_shape, new_shape, expected_shape=None, arg_shape=True,
             X = np.random.rand(*old_shape).astype(np.float32)
 
             blob_in = 'X'
-            blob_out = blob_in if in_place else blob_in + '_out'
+            blob_out = blob_in if in_place else f'{blob_in}_out'
 
             if arg_shape:
                 op = core.CreateOperator('Reshape',

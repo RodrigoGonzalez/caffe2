@@ -39,17 +39,14 @@ def visualize_summary(filename):
     try:
         data = np.loadtxt(filename)
     except Exception as e:
-        return 'Cannot load file {}: {}'.format(filename, str(e))
+        return f'Cannot load file {filename}: {str(e)}'
     chart_name = os.path.splitext(os.path.basename(filename))[0]
     chart = nvd3.lineChart(
-        name=chart_name + '_summary_chart',
+        name=f'{chart_name}_summary_chart',
         height=args.chart_height,
-        y_axis_format='.03g'
+        y_axis_format='.03g',
     )
-    if args.sample < 0:
-        step = max(data.shape[0] / -args.sample, 1)
-    else:
-        step = args.sample
+    step = max(data.shape[0] / -args.sample, 1) if args.sample < 0 else args.sample
     xdata = np.arange(0, data.shape[0], step)
     # data should have 4 dimensions.
     chart.add_serie(x=xdata, y=data[xdata, 0], name='min')
@@ -66,17 +63,14 @@ def visualize_print_log(filename):
         if data.ndim == 1:
             data = data[:, np.newaxis]
     except Exception as e:
-        return 'Cannot load file {}: {}'.format(filename, str(e))
+        return f'Cannot load file {filename}: {str(e)}'
     chart_name = os.path.splitext(os.path.basename(filename))[0]
     chart = nvd3.lineChart(
-        name=chart_name + '_log_chart',
+        name=f'{chart_name}_log_chart',
         height=args.chart_height,
-        y_axis_format='.03g'
+        y_axis_format='.03g',
     )
-    if args.sample < 0:
-        step = max(data.shape[0] / -args.sample, 1)
-    else:
-        step = args.sample
+    step = max(data.shape[0] / -args.sample, 1) if args.sample < 0 else args.sample
     xdata = np.arange(0, data.shape[0], step)
     # if there is only one curve, we also show the running min and max
     if data.shape[1] == 1:
@@ -97,11 +91,7 @@ def visualize_print_log(filename):
     else:
         for i in range(0, min(data.shape[1], args.max_curves)):
             # data should have 4 dimensions.
-            chart.add_serie(
-                x=xdata,
-                y=data[xdata, i],
-                name='{}[{}]'.format(chart_name, i)
-            )
+            chart.add_serie(x=xdata, y=data[xdata, i], name=f'{chart_name}[{i}]')
 
     return jsonify_nvd3(chart)
 
@@ -113,10 +103,7 @@ def visualize_file(filename):
     elif filename.endswith('log'):
         return visualize_print_log(fullname)
     else:
-        return flask.jsonify(
-            result='Unsupport file: {}'.format(filename),
-            script=''
-        )
+        return flask.jsonify(result=f'Unsupport file: {filename}', script='')
 
 
 @app.route('/')
@@ -134,8 +121,7 @@ def index():
 
 @app.route('/visualization/<string:name>')
 def visualization(name):
-    ret = visualize_file(name)
-    return ret
+    return visualize_file(name)
 
 
 def main(argv):
@@ -179,7 +165,7 @@ def main(argv):
     args = parser.parse_args(argv)
     server = tornado.httpserver.HTTPServer(tornado.wsgi.WSGIContainer(app))
     server.listen(args.port)
-    print("Tornado server starting on port {}.".format(args.port))
+    print(f"Tornado server starting on port {args.port}.")
     tornado.ioloop.IOLoop.instance().start()
 
 

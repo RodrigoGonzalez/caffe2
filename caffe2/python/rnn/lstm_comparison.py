@@ -29,22 +29,22 @@ def Compare(args):
                     workspace.ResetWorkspace()
                     results.append((copy(args), float(t_own), float(t_cudnn)))
                     print(args)
-                    print("t_cudnn / t_own: {}".format(t_cudnn / t_own))
+                    print(f"t_cudnn / t_own: {t_cudnn / t_own}")
 
     for args, t_own, t_cudnn in results:
-        print("{}: cudnn time: {}, own time: {}, ratio: {}".format(
-            str(args), t_cudnn, t_own, t_cudnn / t_own))
+        print(
+            f"{str(args)}: cudnn time: {t_cudnn}, own time: {t_own}, ratio: {t_cudnn / t_own}"
+        )
 
     ratio_sum = 0
     for args, t_own, t_cudnn in results:
         ratio = float(t_cudnn) / t_own
         ratio_sum += ratio
-        print("hidden_dim: {}, seq_lengths: {}, batch_size: {}, num_layers: {}:"
-              " cudnn time: {}, own time: {}, ratio: {}".format(
-                  args.hidden_dim, args.seq_length, args.batch_size,
-                  args.num_layers, t_cudnn, t_own, ratio))
+        print(
+            f"hidden_dim: {args.hidden_dim}, seq_lengths: {args.seq_length}, batch_size: {args.batch_size}, num_layers: {args.num_layers}: cudnn time: {t_cudnn}, own time: {t_own}, ratio: {ratio}"
+        )
 
-    print("Ratio average: {}".format(ratio_sum / len(results)))
+    print(f"Ratio average: {ratio_sum / len(results)}")
 
 
 if __name__ == '__main__':

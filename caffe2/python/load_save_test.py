@@ -226,7 +226,7 @@ class TestLoadSave(TestLoadSaveBase):
     def testBlobNameOverrides(self):
         original_names = ['blob_a', 'blob_b', 'blob_c']
         new_names = ['x', 'y', 'z']
-        blobs = [np.random.permutation(6) for i in range(3)]
+        blobs = [np.random.permutation(6) for _ in range(3)]
         for i, blob in enumerate(blobs):
             self.assertTrue(workspace.FeedBlob(original_names[i], blob))
             self.assertTrue(workspace.HasBlob(original_names[i]))
@@ -280,33 +280,37 @@ class TestLoadSave(TestLoadSaveBase):
             self.assertTrue(
                 workspace.RunOperatorOnce(
                     core.CreateOperator(
-                        "Load", [], load_new_names[0:1],
+                        "Load",
+                        [],
+                        load_new_names[:1],
                         absolute_path=1,
                         db=os.path.join(tmp_folder, "db"),
                         db_type=self._db_type,
-                        source_blob_names=new_names[0:1]
+                        source_blob_names=new_names[:1],
                     )
                 )
             )
             # we should have 'blob_a/b/c/' and 'blob_x' now
             self.assertEqual(len(workspace.Blobs()), 4)
-            for i, name in enumerate(load_new_names[0:1]):
+            for i, name in enumerate(load_new_names[:1]):
                 self.assertTrue(workspace.HasBlob(name))
                 self.assertTrue((workspace.FetchBlob(name) == blobs[i]).all())
             self.assertTrue(
                 workspace.RunOperatorOnce(
                     core.CreateOperator(
-                        "Load", [], load_new_names[0:3],
+                        "Load",
+                        [],
+                        load_new_names[:3],
                         absolute_path=1,
                         db=os.path.join(tmp_folder, "db"),
                         db_type=self._db_type,
-                        source_blob_names=new_names[0:3]
+                        source_blob_names=new_names[:3],
                     )
                 )
             )
             # we should have 'blob_a/b/c/' and 'blob_x/y/z' now
             self.assertEqual(len(workspace.Blobs()), 6)
-            for i, name in enumerate(load_new_names[0:3]):
+            for i, name in enumerate(load_new_names[:3]):
                 self.assertTrue(workspace.HasBlob(name))
                 self.assertTrue((workspace.FetchBlob(name) == blobs[i]).all())
         finally:

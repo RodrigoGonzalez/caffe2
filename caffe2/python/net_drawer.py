@@ -48,8 +48,7 @@ def _rectify_operator_and_name(operators_or_net, name):
     elif hasattr(operators_or_net, 'Proto'):
         net = operators_or_net.Proto()
         if not isinstance(net, caffe2_pb2.NetDef):
-            raise RuntimeError(
-                "Expecting NetDef, but got {}".format(type(net)))
+            raise RuntimeError(f"Expecting NetDef, but got {type(net)}")
         operators = net.op
         if name is None:
             name = net.name
@@ -162,8 +161,8 @@ def GetPydotGraphMinimal(
             # only add nodes that do not have transitive ancestry
             for node in parents:
                 if all(
-                    [node not in op_ancestry[other_node]
-                     for other_node in parents]
+                    node not in op_ancestry[other_node]
+                    for other_node in parents
                 ):
                     graph.add_edge(pydot.Edge(node, op_node))
         else:
@@ -180,7 +179,7 @@ def GetOperatorMapForPlan(plan_def):
     operator_map = {}
     for net_id, net in enumerate(plan_def.network):
         if net.HasField('name'):
-            operator_map[plan_def.name + "_" + net.name] = net.op
+            operator_map[f"{plan_def.name}_{net.name}"] = net.op
         else:
             operator_map[plan_def.name + "_network_%d" % net_id] = net.op
     return operator_map
@@ -262,7 +261,7 @@ def GetGraphInJson(operators_or_net, output_filepath):
     nodes = []
     edges = []
     for op_id, op in enumerate(operators):
-        op_label = op.name + '/' + op.type if op.name else op.type
+        op_label = f'{op.name}/{op.type}' if op.name else op.type
         op_node_id = len(nodes)
         nodes.append({
             'id': op_node_id,
@@ -332,7 +331,7 @@ def GetGraphPngSafe(func, *args, **kwargs):
             raise ValueError("func is expected to return pydot.Dot")
         return graph.create_png()
     except Exception as e:
-        logger.error("Failed to draw graph: {}".format(e))
+        logger.error(f"Failed to draw graph: {e}")
         return _DummyPngImage
 
 
@@ -388,7 +387,7 @@ def main():
                 node_producer=GetOpNodeProducer(args.append_output, **OP_STYLE))
         filename = args.output_prefix + graph.get_name() + '.dot'
         graph.write(filename, format='raw')
-        pdf_filename = filename[:-3] + 'pdf'
+        pdf_filename = f'{filename[:-3]}pdf'
         try:
             graph.write_pdf(pdf_filename)
         except Exception:

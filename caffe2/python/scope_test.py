@@ -17,15 +17,15 @@ def thread_runner(idx, testobj):
     global SUCCESS_COUNT
     testobj.assertEquals(scope.CurrentNameScope(), "")
     testobj.assertEquals(scope.CurrentDeviceScope(), None)
-    namescope = "namescope_{}".format(idx)
+    namescope = f"namescope_{idx}"
     dsc = core.DeviceOption(caffe2_pb2.CUDA, idx)
     with scope.DeviceScope(dsc):
         with scope.NameScope(namescope):
-            testobj.assertEquals(scope.CurrentNameScope(), namescope + "/")
+            testobj.assertEquals(scope.CurrentNameScope(), f"{namescope}/")
             testobj.assertEquals(scope.CurrentDeviceScope(), dsc)
 
             time.sleep(0.01 + idx * 0.01)
-            testobj.assertEquals(scope.CurrentNameScope(), namescope + "/")
+            testobj.assertEquals(scope.CurrentNameScope(), f"{namescope}/")
             testobj.assertEquals(scope.CurrentDeviceScope(), dsc)
 
     testobj.assertEquals(scope.CurrentNameScope(), "")
@@ -87,12 +87,13 @@ class TestScope(unittest.TestCase):
         self.assertEquals(scope.CurrentNameScope(), "")
         self.assertEquals(scope.CurrentDeviceScope(), None)
 
-        threads = []
-        for i in range(4):
-            threads.append(threading.Thread(
+        threads = [
+            threading.Thread(
                 target=thread_runner,
                 args=(i, self),
-            ))
+            )
+            for i in range(4)
+        ]
         for t in threads:
             t.start()
 

@@ -183,6 +183,6 @@ class CopyOpsTest(unittest.TestCase):
             expected = initial_params[p] - 2.0 * workspace.FetchBlob(g)
             actual = updated_params[p]
             self.assertTrue(
-                np.array_equal(expected, updated_params[p]),
-                "Mismatch: {}: {}, {}".format(p, expected, actual),
+                np.array_equal(expected, actual),
+                f"Mismatch: {p}: {expected}, {actual}",
             )

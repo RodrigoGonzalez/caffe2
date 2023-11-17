@@ -21,7 +21,7 @@ class TestScatterOps(hu.HypothesisTestCase):
         self, num_args, first_dim, index_dim, extra_dims, ind_type, gc, dc):
         ins = ['data', 'w0', 'indices']
         for i in range(1, num_args + 1):
-            ins.extend(['x' + str(i), 'w' + str(i)])
+            ins.extend([f'x{str(i)}', f'w{str(i)}'])
         op = core.CreateOperator(
             'ScatterWeightedSum',
             ins,
@@ -41,10 +41,7 @@ class TestScatterOps(hu.HypothesisTestCase):
         d = rand_array(first_dim, *extra_dims)
         ind = np.random.randint(0, first_dim, index_dim).astype(ind_type)
         # ScatterWeightedSumOp only supports w0=1.0 in CUDAContext
-        if(gc == hu.gpu_do):
-            w0 = np.array(1.0).astype(np.float32)
-        else:
-            w0 = rand_array()
+        w0 = np.array(1.0).astype(np.float32) if (gc == hu.gpu_do) else rand_array()
         inputs = [d, w0, ind]
         for _ in range(1, num_args + 1):
             x = rand_array(index_dim, *extra_dims)

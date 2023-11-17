@@ -11,10 +11,7 @@ from caffe2.python import extension_loader
 with extension_loader.DlopenGuard():
     try:
         from caffe2.python.caffe2_pybind11_state_gpu import *  # noqa
-        if num_cuda_devices():  # noqa
-            has_gpu_support = True
-        else:
-            has_gpu_support = False
+        has_gpu_support = bool(num_cuda_devices())
     except ImportError as e:
         logging.warning(
             'This caffe2 python run does not have GPU support. '

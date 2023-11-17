@@ -68,11 +68,11 @@ class OperatorStatsContainer():
         return d
 
     def ReadOpRuns(self, model, num_days):
-        print("Reading op stats for model {}".format(model))
+        print(f"Reading op stats for model {model}")
         return self._query(model, num_days)
 
     def WriteOpRuns(self, model):
-        print("Logging to scuba for model {}".format(model))
+        print(f"Logging to scuba for model {model}")
         scuba = ScubaData("caffe2_op_runs")
 
         sample = Sample()
@@ -95,7 +95,7 @@ class OperatorStatsContainer():
         # Iterate over current run's operator timing
         for stat in self.op_stats.stats:
             times = op_runs[stat.name]
-            print("{} execution times: {}".format(stat.name, times))
+            print(f"{stat.name} execution times: {times}")
 
             mean = np.mean(times)
             std = np.std(times)
@@ -106,11 +106,8 @@ class OperatorStatsContainer():
             if stat.mean > (std_coefficient * std +
                             mean) and stat.mean > (mean_coefficient * mean):
                 regression = True
-                op_list[stat.name] = str((stat.mean - mean) * 100 / mean) + "%"
-                print(
-                    "\tregression for {}: current runtime {} ms".
-                    format(stat.name, stat.mean)
-                )
+                op_list[stat.name] = f"{str((stat.mean - mean) * 100 / mean)}%"
+                print(f"\tregression for {stat.name}: current runtime {stat.mean} ms")
 
         if not regression:
             # Write the operator execution times to caffe2_op_runs table

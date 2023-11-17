@@ -93,9 +93,9 @@ class Markdown(Formatter):
         self.addLinebreak()
         assert(len(table) > 1)
         if noTitle:
-            table.insert(0, [' ' for i in range(len(table[0]))])
+            table.insert(0, [' ' for _ in range(len(table[0]))])
         self.addLine(' | '.join(table[0]))
-        self.addLine(' | '.join(['----' for i in range(len(table[0]))]))
+        self.addLine(' | '.join(['----' for _ in range(len(table[0]))]))
         for row in table[1:]:
             self.addLine(' | '.join(row))
         self.addLinebreak()

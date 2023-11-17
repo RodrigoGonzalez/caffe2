@@ -611,6 +611,8 @@ class TestSoftmaxOps(hu.HypothesisTestCase):
         '''
         from caffe2.proto import caffe2_pb2
 
+        n = 8
+        D = 4
         for _j in range(3):
             gpuop = core.CreateOperator(
                 "SpatialSoftmaxWithLoss",
@@ -626,12 +628,10 @@ class TestSoftmaxOps(hu.HypothesisTestCase):
                 device_option=core.DeviceOption(caffe2_pb2.CPU)
             )
 
-            n = 8
-            D = 4
             W = 64 + int(np.random.rand(1) * 1024)
             H = 64 + int(np.random.rand(1) * 1024)
 
-            print("W: {} H: {}".format(W, H))
+            print(f"W: {W} H: {H}")
 
             X = np.random.rand(n, D, H, W).astype(np.float32)
             X = X + 1e-2

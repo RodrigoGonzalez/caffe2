@@ -133,9 +133,7 @@ def Allreduce8(net, blobs, reduced_affix, gpu_indices):
         )
     # Reduction level 3: this involves a copy.
     reduced_4_copy = reduced[4].Copy(
-        [],
-        str(reduced[4]) + '_copy',
-        device_option=OnGPU(gpu_indices[0])
+        [], f'{str(reduced[4])}_copy', device_option=OnGPU(gpu_indices[0])
     )
     reduced[0] = reduced[0].Add(
         reduced_4_copy,
@@ -181,7 +179,7 @@ def AllreduceFallback(net, blobs, reduced_affix, gpu_indices):
         device_option=OnGPU(gpu_indices[0])
     )
     # do temp copy and add
-    temp_name = reduced[0] + '_temp_copy'
+    temp_name = f'{reduced[0]}_temp_copy'
     for i in range(1, len(gpu_indices)):
         temp = net.Copy(
             blobs[i],

@@ -31,16 +31,18 @@ def _FC_or_packed_FC(
         bias_tags.append(ParameterTags.COMPUTED_PARAM)
 
     weight = model.create_param(
-        param_name=blob_out + '_w',
+        param_name=f'{blob_out}_w',
         shape=[dim_out, dim_in],
         initializer=WeightInitializer,
-        tags=ParameterTags.WEIGHT
+        tags=ParameterTags.WEIGHT,
     )
     bias = model.create_param(
-        param_name=blob_out + '_b',
-        shape=[dim_out, ],
+        param_name=f'{blob_out}_b',
+        shape=[
+            dim_out,
+        ],
         initializer=BiasInitializer,
-        tags=bias_tags
+        tags=bias_tags,
     )
 
     return op_call([blob_in, weight, bias], blob_out, **kwargs)
@@ -70,18 +72,20 @@ def fc_decomp(
     )
     blob_out = blob_out or model.net.NextName()
     u = model.create_param(
-        param_name=blob_out + '_u',
+        param_name=f'{blob_out}_u',
         shape=[dim_out, rank_approx],
         initializer=WeightInitializer,
     )
     v = model.create_param(
-        param_name=blob_out + '_v',
+        param_name=f'{blob_out}_v',
         shape=[dim_in, rank_approx],
         initializer=WeightInitializer,
     )
     bias = model.create_param(
-        param_name=blob_out + '_b',
-        shape=[dim_out, ],
+        param_name=f'{blob_out}_b',
+        shape=[
+            dim_out,
+        ],
         initializer=BiasInitializer,
     )
     return model.net.FC_Decomp([blob_in, u, v, bias], blob_out, **kwargs)
@@ -101,65 +105,44 @@ def fc_prune(
     bias_init = bias_init if bias_init else ('ConstantFill', {})
     mask_init = mask_init if mask_init else ('ConstantFill', {})
     blob_out = blob_out or model.net.NextName()
-    compress_rate = blob_out + '_compress_rate'
+    compress_rate = f'{blob_out}_compress_rate'
     if model.init_params:
         compress_lb = model.param_init_net.ConstantFill(
-            [],
-            blob_out + '_lb',
-            shape=[1],
-            value=comp_lb
+            [], f'{blob_out}_lb', shape=[1], value=comp_lb
         )
         weight = model.param_init_net.__getattr__(weight_init[0])(
-            [],
-            blob_out + '_w',
-            shape=[dim_out, dim_in],
-            **weight_init[1]
+            [], f'{blob_out}_w', shape=[dim_out, dim_in], **weight_init[1]
         )
         mask = model.param_init_net.ConstantFill(
-            [],
-            blob_out + '_m',
-            shape=[dim_out, dim_in],
-            value=1.0
+            [], f'{blob_out}_m', shape=[dim_out, dim_in], value=1.0
         )
         ag_dw = model.param_init_net.__getattr__(mask_init[0])(
-            [],
-            blob_out + '_ag_dw',
-            shape=[dim_out, dim_in],
-            **mask_init[1]
+            [], f'{blob_out}_ag_dw', shape=[dim_out, dim_in], **mask_init[1]
         )
         bias = model.param_init_net.__getattr__(bias_init[0])(
             [],
-            blob_out + '_b',
-            shape=[dim_out, ],
-            **bias_init[1]
+            f'{blob_out}_b',
+            shape=[
+                dim_out,
+            ],
+            **bias_init[1],
         )
         mask_seq = model.param_init_net.__getattr__(mask_init[0])(
-            [],
-            blob_out + '_mask_seq',
-            shape=[dim_out, dim_in],
-            **mask_init[1]
+            [], f'{blob_out}_mask_seq', shape=[dim_out, dim_in], **mask_init[1]
         )
         thres = model.param_init_net.ConstantFill(
-            [],
-            blob_out + '_thres',
-            shape=[1],
-            value=threshold
+            [], f'{blob_out}_thres', shape=[1], value=threshold
         )
     else:
-        compress_lb = core.ScopedBlobReference(
-            blob_out + '_lb', model.param_init_net)
-        weight = core.ScopedBlobReference(
-            blob_out + '_w', model.param_init_net)
-        bias = core.ScopedBlobReference(
-            blob_out + '_b', model.param_init_net)
-        mask = core.ScopedBlobReference(
-            blob_out + '_m', model.param_init_net)
-        ag_dw = core.ScopedBlobReference(
-            blob_out + '_ag_dw', model.param_init_net)
+        compress_lb = core.ScopedBlobReference(f'{blob_out}_lb', model.param_init_net)
+        weight = core.ScopedBlobReference(f'{blob_out}_w', model.param_init_net)
+        bias = core.ScopedBlobReference(f'{blob_out}_b', model.param_init_net)
+        mask = core.ScopedBlobReference(f'{blob_out}_m', model.param_init_net)
+        ag_dw = core.ScopedBlobReference(f'{blob_out}_ag_dw', model.param_init_net)
         mask_seq = core.ScopedBlobReference(
-            blob_out + '_mask_seq', model.param_init_net)
-        thres = core.ScopedBlobReference(
-            blob_out + '_thres', model.param_init_net)
+            f'{blob_out}_mask_seq', model.param_init_net
+        )
+        thres = core.ScopedBlobReference(f'{blob_out}_thres', model.param_init_net)
 
     model.AddParameter(weight)
     model.AddParameter(bias)

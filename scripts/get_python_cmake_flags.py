@@ -33,11 +33,11 @@ lib = sysconfig.get_config_var("LIBDIR")
 
 # macOS specific
 if sys.platform == "darwin":
-    lib = os.path.dirname(lib) + '/Python'
+    lib = f'{os.path.dirname(lib)}/Python'
     if os.path.isfile(lib):
         flags += '-DPYTHON_LIBRARY={lib} '.format(lib=lib)
 
-if os.path.isfile(inc + '/Python.h'):
+if os.path.isfile(f'{inc}/Python.h'):
     flags += '-DPYTHON_INCLUDE_DIR={inc} '.format(inc=inc)
 
 print(flags, end='')

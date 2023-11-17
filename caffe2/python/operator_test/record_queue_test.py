@@ -58,20 +58,21 @@ class TestRecordQueue(TestCase):
 
         consumer_steps = []
         for i in range(num_consume):
-            name = 'queue_reader_' + str(i)
+            name = f'queue_reader_{str(i)}'
             net_consume = core.Net(name)
             should_stop, fields = q_reader.read_record(net_consume)
             step_consume = core.execution_step(name, net_consume)
 
-            name = 'dataset_writer_' + str(i)
+            name = f'dataset_writer_{str(i)}'
             net_dataset = core.Net(name)
             rec_dataset_writer.write(net_dataset, fields.field_blobs())
             step_dataset = core.execution_step(name, net_dataset)
 
             step = core.execution_step(
-                'consumer_' + str(i),
+                f'consumer_{str(i)}',
                 [step_consume, step_dataset],
-                should_stop_blob=should_stop)
+                should_stop_blob=should_stop,
+            )
             consumer_steps.append(step)
         consumer_step = core.execution_step(
             'consumers', consumer_steps, concurrent_substeps=True)

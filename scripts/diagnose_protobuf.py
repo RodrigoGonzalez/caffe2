@@ -13,6 +13,7 @@ Usage:
     python scripts/diagnose_protobuf.py
 """
 
+
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -30,34 +31,28 @@ except ImportError:
     print("DEBUG: cannot find python protobuf install.")
     python_protobuf_installed = False
 
-if os.name == 'nt':
-    protoc_name = 'protoc.exe'
-else:
-    protoc_name = 'protoc'
-
+protoc_name = 'protoc.exe' if os.name == 'nt' else 'protoc'
 try:
     p = Popen([protoc_name, '--version'], stdout=PIPE, stderr=PIPE)
     out, err = p.communicate()
 except:
     print('DEBUG: did not find protoc binary.')
-    print('DEBUG: out: ' + out)
-    print('DEBUG: err: ' + err)
+    print(f'DEBUG: out: {out}')
+    print(f'DEBUG: err: {err}')
     native_protobuf_installed = False
 else:
     if p.returncode:
         print('DEBUG: protoc returned a non-zero return code.')
-        print('DEBUG: out: ' + out)
-        print('DEBUG: err: ' + err)
+        print(f'DEBUG: out: {out}')
+        print(f'DEBUG: err: {err}')
         native_protobuf_installed = False
+    elif tmp := re.search('\d\.\d\.\d', out):
+        native_version = tmp.group(0)
+        native_protobuf_installed = True
     else:
-        tmp = re.search('\d\.\d\.\d', out)
-        if tmp:
-            native_version = tmp.group(0)
-            native_protobuf_installed = True
-        else:
-            print('DEBUG: cannot parse protoc version string.')
-            print('DEBUG: out: ' + out)
-            native_protobuf_installed = False
+        print('DEBUG: cannot parse protoc version string.')
+        print(f'DEBUG: out: {out}')
+        native_protobuf_installed = False
 
 PYTHON_PROTOBUF_NOT_INSTALLED = """
 You have not installed python protobuf. Protobuf is needed to run caffe2. You
@@ -88,10 +83,10 @@ if not native_protobuf_installed:
     print(NATIVE_PROTOBUF_NOT_INSTALLED)
 
 if python_protobuf_installed and native_protobuf_installed:
-    if python_version != native_version:
-        print(VERSION_MISMATCH)
-    else:
+    if python_version == native_version:
         print('All looks good.')
+    else:
+        print(VERSION_MISMATCH)
 
 
 

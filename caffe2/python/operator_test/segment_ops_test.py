@@ -16,10 +16,7 @@ class TesterBase:
         segments = self.split(data, segment_ids, indices)
         output = np.zeros((len(segments), ) + data.shape[1:])
         for i, segment in enumerate(segments):
-            if len(segment) > 0:
-                output[i] = reducer(segment)
-            else:
-                output[i] = 0.0
+            output[i] = reducer(segment) if len(segment) > 0 else 0.0
         return output
 
     def segment_reduce_grad_op(

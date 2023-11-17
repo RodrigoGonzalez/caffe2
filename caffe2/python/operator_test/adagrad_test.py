@@ -63,7 +63,7 @@ class TestAdagrad(hu.HypothesisTestCase):
             hu.tensor(dtype=np.int64,
                       elements=st.sampled_from(np.arange(grad.shape[0]))),
         )
-        hypothesis.note('indices.shape: %s' % str(indices.shape))
+        hypothesis.note(f'indices.shape: {str(indices.shape)}')
 
         # For now, the indices must be unique
         hypothesis.assume(np.array_equal(np.unique(indices.flatten()),

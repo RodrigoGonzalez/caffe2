@@ -20,10 +20,10 @@ class ExpandDims(ModelLayer):
         # Assume that first dimension is batch, so actual dims[i] in shape is
         # dims[i] - 1
         dims = [d - 1 for d in dims]
-        assert all([d >= 0 for d in dims])
+        assert all(d >= 0 for d in dims)
         assert isinstance(input_record, schema.Scalar),\
-            "Incorrect input type. Excpected Scalar, but received: {0}".\
-            format(input_record)
+                "Incorrect input type. Excpected Scalar, but received: {0}".\
+                format(input_record)
 
         input_dims = list(input_record.field_type().shape)
         dims = sorted(set(dims))
@@ -35,7 +35,8 @@ class ExpandDims(ModelLayer):
 
         self.output_schema = schema.Scalar(
             (input_record.field_type().base, output_dims),
-            model.net.NextScopedBlob(name + '_output'))
+            model.net.NextScopedBlob(f'{name}_output'),
+        )
 
     def add_ops(self, net):
         net.ExpandDims(

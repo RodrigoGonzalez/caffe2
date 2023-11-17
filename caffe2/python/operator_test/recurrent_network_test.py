@@ -124,11 +124,7 @@ class RecurrentNetworkTest(hu.HypothesisTestCase):
         output_name,
         left_pad,
     ):
-        if left_pad:
-            padding_width = conv_window - 1
-        else:
-            padding_width = 0
-
+        padding_width = conv_window - 1 if left_pad else 0
         # [batch_size, inputs_length, state_size]
         inputs_transposed = model.net.Transpose(
             inputs,
@@ -144,7 +140,7 @@ class RecurrentNetworkTest(hu.HypothesisTestCase):
         # [batch_size, 1, inputs_length - conv_window + 1, state_size]
         output_transposed_4d = model.net.Conv(
             [inputs_transposed_4d, conv_filter, conv_bias],
-            output_name + '_transposed_4d',
+            f'{output_name}_transposed_4d',
             kernel_h=1,
             kernel_w=conv_window,
             order='NHWC',
@@ -155,17 +151,13 @@ class RecurrentNetworkTest(hu.HypothesisTestCase):
         )
         # [batch_size, inputs_length - conv_window + 1, state_size]
         output_transposed = model.net.Squeeze(
-            output_transposed_4d,
-            output_name + '_transposed',
-            dims=[1],
+            output_transposed_4d, f'{output_name}_transposed', dims=[1]
         )
-        # [inputs_length - conv_window + 1, batch_size, state_size]
-        output = model.net.Transpose(
+        return model.net.Transpose(
             output_transposed,
             output_name,
             axes=[1, 0, 2],
         )
-        return output
 
     @given(sequence_length=st.integers(3, 7),
            conv_window=st.integers(1, 3),

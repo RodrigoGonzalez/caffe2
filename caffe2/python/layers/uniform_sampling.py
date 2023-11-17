@@ -36,7 +36,7 @@ class UniformSampling(ModelLayer):
 
         self.num_elements = num_elements
 
-        self.num_samples = model.net.NextScopedBlob(name + "_num_samples")
+        self.num_samples = model.net.NextScopedBlob(f"{name}_num_samples")
         self.params.append(
             LayerParameter(
                 parameter=self.num_samples,
@@ -51,7 +51,7 @@ class UniformSampling(ModelLayer):
             )
         )
 
-        self.sampling_prob = model.net.NextScopedBlob(name + "_prob")
+        self.sampling_prob = model.net.NextScopedBlob(f"{name}_prob")
         self.params.append(
             LayerParameter(
                 parameter=self.sampling_prob,
@@ -69,9 +69,10 @@ class UniformSampling(ModelLayer):
 
         self.output_schema = schema.Struct(
             (
-                'samples', schema.Scalar(
-                    np.int32, model.net.NextScopedBlob(name + "_samples")
-                )
+                'samples',
+                schema.Scalar(
+                    np.int32, model.net.NextScopedBlob(f"{name}_samples")
+                ),
             ),
             ('sampling_prob', schema.Scalar(np.float32, self.sampling_prob)),
         )

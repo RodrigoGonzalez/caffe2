@@ -112,15 +112,12 @@ class TestWeightDecay(TestCase):
         for op in model.net.Proto().op:
             if op.type == 'WeightedSum' and 'wd_0_0' in op.input:
                 if op.output[0] not in expected_weight_grad:
-                    print(
-                        "Unexpected param for weight_decay: {}".
-                        format(op.output[0])
-                    )
+                    print(f"Unexpected param for weight_decay: {op.output[0]}")
                 self.assertTrue(op.output[0] in expected_weight_grad)
                 expected_weight_grad.remove(op.output[0])
 
         self.assertEqual(
             expected_weight_grad,
             set(),
-            "Not all weights were decayed: {}".format(expected_weight_grad)
+            f"Not all weights were decayed: {expected_weight_grad}",
         )

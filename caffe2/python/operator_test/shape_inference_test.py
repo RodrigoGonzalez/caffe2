@@ -65,7 +65,7 @@ class TestShapeInference(test_util.TestCase):
         for param in model.GetParams():
             param_grad = model.param_to_grad[param]
             param_momentum = model.param_init_net.ConstantFill(
-                [param], param + '_momentum', value=0.0
+                [param], f'{param}_momentum', value=0.0
             )
             model.net.MomentumSGDUpdate(
                 [param_grad, param_momentum, LR, param],
@@ -272,8 +272,7 @@ class TestShapeInference(test_util.TestCase):
 
         # Testing with axes undefined
         for i in range(0, 4):
-            m.net.Tile(
-                "tensor", "tiled_tensor_{}".format(i), tiles=5, axis=i)
+            m.net.Tile("tensor", f"tiled_tensor_{i}", tiles=5, axis=i)
         self.InferTensorRunAndCompare(m)
 
     def testShapeInferenceFlatten(self):
@@ -315,10 +314,10 @@ class TestShapeInference(test_util.TestCase):
         ]
 
         for (xstr, xnp, _) in types:
-            xname = 'X%s' % xstr
+            xname = f'X{xstr}'
             workspace.FeedBlob(xname, np.random.rand(1).astype(xnp))
             for (ystr, _, yc2) in types:
-                yname = 'Y%s_to_%s' % (xstr, ystr)
+                yname = f'Y{xstr}_to_{ystr}'
                 model.Cast(xname, yname, to=yc2)
 
         self.InferTensorRunAndCompare(model)
@@ -362,8 +361,6 @@ class TestShapeInference(test_util.TestCase):
                     correct_types[b] = caffe2_pb2.TensorProto.FLOAT
                 elif arr.dtype == np.dtype('int32'):
                     correct_types[b] = caffe2_pb2.TensorProto.INT32
-                # BYTE
-                # STRING
                 elif arr.dtype == np.dtype('bool'):
                     correct_types[b] = caffe2_pb2.TensorProto.BOOL
                 elif arr.dtype == np.dtype('uint8'):
@@ -381,7 +378,7 @@ class TestShapeInference(test_util.TestCase):
                 elif arr.dtype == np.dtype('float64'):
                     correct_types[b] = caffe2_pb2.TensorProto.DOUBLE
                 else:
-                    correct_types[b] = "unknown {}".format(arr.dtype)
+                    correct_types[b] = f"unknown {arr.dtype}"
             else:
                 correct_types[b] = str(type(arr))
 
@@ -389,22 +386,17 @@ class TestShapeInference(test_util.TestCase):
             self.assertTrue(
                 np.array_equal(
                     np.array(shapes[b]).astype(np.int32),
-                    np.array(correct_shapes[b]).astype(np.int32)
+                    np.array(correct_shapes[b]).astype(np.int32),
                 ),
-                "Shape {} mismatch: {} vs. {}".format(
-                    b, shapes[b], correct_shapes[b]
-                )
+                f"Shape {b} mismatch: {shapes[b]} vs. {correct_shapes[b]}",
             )
             self.assertFalse(
-                b not in types and b in correct_types,
-                "Type for {} not defined".format(b),
+                b not in types and b in correct_types, f"Type for {b} not defined"
             )
             self.assertEqual(
                 types[b],
                 correct_types[b],
-                "Type {} mismatch: {} vs. {}".format(
-                    b, types[b], correct_types[b],
-                )
+                f"Type {b} mismatch: {types[b]} vs. {correct_types[b]}",
             )
 
 

@@ -38,7 +38,7 @@ def _assert_records_equal(actual, ref):
         len(b1), len(b2)
     )
     for name, d1, d2 in zip(ref.field_names(), b1, b2):
-        _assert_arrays_equal(d1, d2, err_msg='Mismatch in field %s.' % name)
+        _assert_arrays_equal(d1, d2, err_msg=f'Mismatch in field {name}.')
 
 
 @st.composite
@@ -556,7 +556,7 @@ class TestDatasetOps(TestCase):
         ONE = init_net.ConstantFill([], 'ONE', shape=[1, 2], value=1)
         for b in blobs:
             init_net.ConstantFill([], [b], shape=[1, 2], value=0)
-            bvec_map[b] = b + '_vec'
+            bvec_map[b] = f'{b}_vec'
             init_net.CreateTensorVector([], [bvec_map[b]])
 
         reader_net = core.Net('reader_net')
@@ -573,7 +573,7 @@ class TestDatasetOps(TestCase):
             num_to_collect=num_to_collect,
         )
 
-        print('Collect Net Proto: {}'.format(collect_net.Proto()))
+        print(f'Collect Net Proto: {collect_net.Proto()}')
 
         plan = core.Plan('collect_data')
         plan.AddStep(core.execution_step('collect_init', init_net))
@@ -590,8 +590,8 @@ class TestDatasetOps(TestCase):
         bconcated_map = {}
         bsize_map = {}
         for b in blobs:
-            bconcated_map[b] = b + '_concated'
-            bsize_map[b] = b + '_size'
+            bconcated_map[b] = f'{b}_concated'
+            bsize_map[b] = f'{b}_size'
             concat_net.ConcatTensorVector([bvec_map[b]], [bconcated_map[b]])
             concat_net.TensorVectorSize([bvec_map[b]], [bsize_map[b]])
 
@@ -612,7 +612,7 @@ class TestDatasetOps(TestCase):
             bins=10,
             range=(1, max_example_to_cover)
         )
-        print('Sample histogram: {}'.format(hist))
+        print(f'Sample histogram: {hist}')
 
         self.assertTrue(all(hist > 0.7 * (num_to_collect / 10)))
         for i in range(1, len(blobs)):

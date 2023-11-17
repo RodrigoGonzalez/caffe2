@@ -28,12 +28,12 @@ def create_db(output_file):
 
     checksum = 0
     with env.begin(write=True) as txn:
+        width = 64
+        height = 32
+
         for j in range(0, 128):
             # MODIFY: add your own data reader / creator
             label = j % 10
-            width = 64
-            height = 32
-
             img_data = np.random.rand(3, width, height)
             # ...
 
@@ -49,16 +49,13 @@ def create_db(output_file):
             label_tensor = tensor_protos.protos.add()
             label_tensor.data_type = 2
             label_tensor.int32_data.append(label)
-            txn.put(
-                '{}'.format(j).encode('ascii'),
-                tensor_protos.SerializeToString()
-            )
+            txn.put(f'{j}'.encode('ascii'), tensor_protos.SerializeToString())
 
             checksum += np.sum(img_data) * label
             if (j % 16 == 0):
-                print("Inserted {} rows".format(j))
+                print(f"Inserted {j} rows")
 
-    print("Checksum/write: {}".format(int(checksum)))
+    print(f"Checksum/write: {int(checksum)}")
     return checksum
 
 
@@ -76,7 +73,7 @@ def read_db_with_caffe2(db_file, expected_checksum):
     workspace.RunNetOnce(model.param_init_net)
     workspace.CreateNet(model.net)
 
-    for batch_idx in range(0, 4):
+    for _ in range(0, 4):
         workspace.RunNet(model.net.Proto().name)
 
         img_datas = workspace.FetchBlob("data")
@@ -84,7 +81,7 @@ def read_db_with_caffe2(db_file, expected_checksum):
         for j in range(batch_size):
             checksum += np.sum(img_datas[j, :]) * labels[j]
 
-    print("Checksum/read: {}".format(int(checksum)))
+    print(f"Checksum/read: {int(checksum)}")
     assert np.abs(expected_checksum - checksum < 0.1), \
         "Read/write checksums dont match"
 

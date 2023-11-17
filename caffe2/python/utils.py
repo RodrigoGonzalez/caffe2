@@ -44,7 +44,8 @@ def Caffe2TensorToNumpyArray(tensor):
     else:
         # TODO: complete the data type.
         raise RuntimeError(
-            "Tensor data type not supported yet: " + str(tensor.data_type))
+            f"Tensor data type not supported yet: {str(tensor.data_type)}"
+        )
 
 
 def NumpyArrayToCaffe2Tensor(arr, name=None):
@@ -63,8 +64,7 @@ def NumpyArrayToCaffe2Tensor(arr, name=None):
         tensor.int32_data.extend(list(arr.flatten().astype(np.int)))
     else:
         # TODO: complete the data type.
-        raise RuntimeError(
-            "Numpy data type not supported yet: " + str(arr.dtype))
+        raise RuntimeError(f"Numpy data type not supported yet: {str(arr.dtype)}")
     return tensor
 
 
@@ -102,8 +102,7 @@ def MakeArgument(key, value):
         argument.strings.extend([v.SerializeToString() for v in value])
     else:
         raise ValueError(
-            "Unknown argument type: key=%s value=%s, value type=%s" %
-            (key, str(value), str(type(value)))
+            f"Unknown argument type: key={key} value={str(value)}, value type={str(type(value))}"
         )
     return argument
 

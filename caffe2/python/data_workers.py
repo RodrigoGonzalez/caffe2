@@ -119,20 +119,30 @@ def init_data_input_workers(
     # Launch fetch worker threads
     worker_ids = [
         global_coordinator.get_new_worker_id()
-        for i in range(num_worker_threads)
+        for _ in range(num_worker_threads)
     ]
     workers = [
         threading.Thread(
             target=fetcher,
-            name="data_workers fetcher id {}".format(worker_id),
-            args=[coordinator, worker_id, fetch_fun, batch_size, input_blob_names],
-        ) for worker_id in worker_ids
+            name=f"data_workers fetcher id {worker_id}",
+            args=[
+                coordinator,
+                worker_id,
+                fetch_fun,
+                batch_size,
+                input_blob_names,
+            ],
+        )
+        for worker_id in worker_ids
     ]
 
-    workers.append(threading.Thread(
-        target=enqueuer,
-        name="Enqueuer {} {}".format(input_source_name, scope.CurrentNameScope()),
-        args=[coordinator]))
+    workers.append(
+        threading.Thread(
+            target=enqueuer,
+            name=f"Enqueuer {input_source_name} {scope.CurrentNameScope()}",
+            args=[coordinator],
+        )
+    )
     coordinator._workers = workers
     global_coordinator.add(coordinator)
 
@@ -193,7 +203,7 @@ class DataInputCoordinator(object):
         try:
             self._active = False
             if reason is not None:
-                log.error("Data input failed due to an error: {}".format(reason))
+                log.error(f"Data input failed due to an error: {reason}")
 
             for q in self._queues:
                 workspace.RunOperatorOnce(
@@ -204,21 +214,21 @@ class DataInputCoordinator(object):
             self._log_inputs_per_interval(0, force=True)
 
     def _wait_finish(self):
-        print("Wait for workers to die: {}".format(self._input_source_name))
+        print(f"Wait for workers to die: {self._input_source_name}")
         for w in self._workers:
             if w != threading.current_thread():
                 w.join(5.0)  # don't wait forever, thread may be blocked in i/o
         success = True
         for w in self._workers:
             if w.isAlive():
-                print("Worker {} failed to close while waiting".format(w))
+                print(f"Worker {w} failed to close while waiting")
                 success = False
 
         # Release memory for the scratch blobs
         if success and len(self._scratch_blobs) > 0:
             utils.ResetBlobs(self._scratch_blobs)
 
-        print("All workers terminated: {}".format(success))
+        print(f"All workers terminated: {success}")
         return success
 
     def _get(self):
@@ -237,8 +247,7 @@ class DataInputCoordinator(object):
             try:
                 qsize = self._internal_queue.qsize()
                 if qsize < 2 and (time.time() - self._last_warning) > LOG_INT_SECS:
-                    print("Warning, data loading lagging behind: " +
-                             "name={}".format(qsize, self._input_source_name))
+                    print(f"Warning, data loading lagging behind: name={qsize}")
                     self._last_warning = time.time()
                 self._counter += 1
                 self._internal_queue.put(chunk, block=True, timeout=0.5)
@@ -265,7 +274,7 @@ class DataInputCoordinator(object):
             self._enqueue_batch_direct()
             return
 
-        cur_batch = [np.array([]) for d in self._input_blob_names]
+        cur_batch = [np.array([]) for _ in self._input_blob_names]
         first_batch_col = self._batch_columns[0]
 
         # Collect data until we have a full batch size
@@ -320,9 +329,9 @@ class DataInputCoordinator(object):
         Enqueue the correctly sized batch arrays to Caffe2's queue.
         '''
         scratch_name = self._namescope + blob_name + \
-            "_scratch_" + self._input_source_name
+                "_scratch_" + self._input_source_name
         blob = core.BlobReference(scratch_name)
-        status = core.BlobReference(scratch_name + "_status")
+        status = core.BlobReference(f"{scratch_name}_status")
         if blob not in self._scratch_blobs:
             self._scratch_blobs.add(blob)
             self._scratch_blobs.add(status)
@@ -354,7 +363,7 @@ class DataInputCoordinator(object):
             return core.ScopedBlobReference(queue_name)
 
         for blob_name in self._input_blob_names:
-            qname = blob_name + "_c2queue" + "_" + self._input_source_name
+            qname = f"{blob_name}_c2queue_{self._input_source_name}"
             q = create_queue(
                 qname, num_blobs=1, capacity=self._c2_queue_capacity
             )
@@ -375,12 +384,10 @@ class DataInputCoordinator(object):
         if delta_seconds >= LOG_INT_SECS or force:
             inputs_per_sec = int(self._inputs / delta_seconds)
             qsize = self._internal_queue.qsize()
-            print("{}/{}: {} inputs/sec".format(
-                self._input_source_name,
-                self._namescope,
-                inputs_per_sec,
-            ))
-            print("-- queue: {} batches".format(qsize))
+            print(
+                f"{self._input_source_name}/{self._namescope}: {inputs_per_sec} inputs/sec"
+            )
+            print(f"-- queue: {qsize} batches")
             # log and reset perf metrics
             self.put_metric('inputs_per_sec', inputs_per_sec, False)
             self.put_metric('queue_size', qsize, False)
@@ -397,12 +404,12 @@ class DataInputCoordinator(object):
             try:
                 logger.log(metrics)
             except Exception as e:
-                print("Failed to call ExternalLogger: {}".format(e))
+                print(f"Failed to call ExternalLogger: {e}")
 
     def put_metric(self, key, value, count=True):
         self._metrics[key] += value
         if count:
-            count_key = '{}_count'.format(key)
+            count_key = f'{key}_count'
             self._metrics[count_key] += 1
 
     def _reset_metrics(self):
@@ -441,7 +448,7 @@ class GlobalCoordinator(object):
             c._start()
 
     def reset_data_input(self, namescope, name, net, batch_size):
-        log.info("Reset data input {}, batch size {}: ".format(name, batch_size))
+        log.info(f"Reset data input {name}, batch size {batch_size}: ")
         for c in self._coordinators:
             if c._input_source_name == name and c._namescope == namescope:
                 c._batch_size = batch_size
@@ -495,19 +502,14 @@ def fetcher(coordinator, worker_id, fetch_fun, batch_size, input_blob_names):
                 assert isinstance(d, np.ndarray), \
                     "Fetcher function must return a numpy array"
             if not coordinator._dont_rebatch:
-                j = 1
-                for d in input_data[1:]:
+                for j, d in enumerate(input_data[1:], start=1):
                     assert d.shape[coordinator._batch_columns[j]] == input_data[0].shape[coordinator._batch_columns[0]], \
                         "Each returned input must have equal number of samples"
-                    j += 1
-
             coordinator.put(input_data)
         except Exception as e:
             print(e)
             logging.exception("Exception in fetcher", e)
-            coordinator._stop("Exception in fetcher {}: {}".format(
-                worker_id, e
-            ))
+            coordinator._stop(f"Exception in fetcher {worker_id}: {e}")
         finally:
             coordinator.put_metric('fetcher_time', time.time() - start_time)
 

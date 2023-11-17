@@ -304,10 +304,12 @@ class TestDB(unittest.TestCase):
         columns = st.field_names()
         # test that recovery works for arbitrary order
         for _ in range(10):
-            some_blobs = [core.BlobReference('blob:' + x) for x in columns]
+            some_blobs = [core.BlobReference(f'blob:{x}') for x in columns]
             rec = schema.from_column_list(columns, col_blobs=some_blobs)
             self.assertTrue(rec.has_blobs())
             self.assertEqual(sorted(st.field_names()), sorted(rec.field_names()))
-            self.assertEqual([str(blob) for blob in rec.field_blobs()],
-                             [str('blob:' + name) for name in rec.field_names()])
+            self.assertEqual(
+                [str(blob) for blob in rec.field_blobs()],
+                [str(f'blob:{name}') for name in rec.field_names()],
+            )
             random.shuffle(columns)

@@ -81,11 +81,10 @@ class CRFWithLoss(object):
         all_paths_scores = self._crf_forward(
             input_data, initial_state, transitions_copy
         )
-        loss = self.model.net.Sub(
+        return self.model.net.Sub(
             [all_paths_scores, path_total_score],
-            core.ScopedBlobReference('crf_loss')
+            core.ScopedBlobReference('crf_loss'),
         )
-        return loss
 
     def _pad_predictions(self, predictions):
         # This function will introduce two labels for beginning of sequence
@@ -191,8 +190,7 @@ class CRFWithLoss(object):
         query_scores = self.model.net.DotProduct(
             [flattend_query, flattend_data]
         )
-        final_sum = self.model.net.ReduceFrontSum([query_scores])
-        return final_sum
+        return self.model.net.ReduceFrontSum([query_scores])
 
     def _crf_forward(
         self,
@@ -229,7 +227,7 @@ class CRFWithLoss(object):
         return accum_score
 
     def build_crf_net(self, input_blob, initial_state, transitions):
-            '''
+        '''
             Adds the crf_net recurrent operator to the model.
 
             model: CNNModelHelper object new operators would be added to
@@ -241,85 +239,85 @@ class CRFWithLoss(object):
             seq_lengths: blob containing sequence lengths (unused)
             '''
 
-            scope = 'crf_net'
+        scope = 'crf_net'
 
-            def s(name):
-                ''
+        def s(name):
+            ''
                 # We have to manually scope due to our internal/external blob
                 # relationships.
-                return "{}/{}".format(str(scope), str(name))
+            return "{}/{}".format(scope, str(name))
 
-            step_model = CNNModelHelper(name='crf_step', param_model=self.model)
-            input_t, cell_t_prev, _ = (
-                step_model.net.AddExternalInputs(
-                    'input_t', 'cell_t_prev', transitions
-                )
+        step_model = CNNModelHelper(name='crf_step', param_model=self.model)
+        input_t, cell_t_prev, _ = (
+            step_model.net.AddExternalInputs(
+                'input_t', 'cell_t_prev', transitions
             )
-            zero_segment_id = step_model.param_init_net.ConstantFill(
-                [],
-                [s('zero_segment_id')],
-                value=0,
-                shape=[self.num_classes_padded],
-                dtype=core.DataType.INT32,
-            )
+        )
+        zero_segment_id = step_model.param_init_net.ConstantFill(
+            [],
+            [s('zero_segment_id')],
+            value=0,
+            shape=[self.num_classes_padded],
+            dtype=core.DataType.INT32,
+        )
 
-            # A hack to bypass model cloning for test
-            step_model.param_init_net.AddExternalOutput(zero_segment_id)
-            """ the CRF step """
-            # Do tile
-            prev_transpose = step_model.Transpose(
-                cell_t_prev,
-                [s('prev_transpose')],
-                axes=(0, 2, 1),
-            )
-            prev_tiled = step_model.net.Tile(
-                prev_transpose,
-                [s('prev_tiled')],
-                tiles=self.num_classes_padded,
-                axis=2,
-            )
-            input_t_tiled = step_model.net.Tile(
-                input_t,
-                [s('input_t_tiled')],
-                tiles=self.num_classes_padded,
-                axis=1,
-            )
-            input_with_prev = step_model.net.Add(
-                [prev_tiled, input_t_tiled],
-                [s('input_with_prev')]
-            )
-            all_with_transitions = step_model.net.Add(
-                [input_with_prev, transitions],
-                [s('prev_with_transitions')],
-                broadcast=1,
-                use_grad_hack=1,
-            )
-            all_with_transitions_reshaped, _ = step_model.net.Reshape(
-                all_with_transitions,
-                [s('all_with_transitions_reshaped'), s('all_with_transitions_orig')],
-                shape=(self.num_classes_padded, self.num_classes_padded)
-            )
-            cell_t = step_model.net.SortedSegmentRangeLogSumExp(
-                [all_with_transitions_reshaped, zero_segment_id],
-                [s('cell_t')],
-            )
-            step_model.net.AddExternalOutputs(cell_t)
-            """ recurrent network """
-            cell_input_blob = initial_state
-            out_all, out_last = recurrent.recurrent_net(
-                net=self.model.net,
-                cell_net=step_model.net,
-                inputs=[(input_t, input_blob)],
-                initial_cell_inputs=[
-                    (cell_t_prev, cell_input_blob),
-                ],
-                links={
-                    cell_t_prev: cell_t,
-                },
-                scope=scope,
-                outputs_with_grads=(1,)
-            )
-            return out_last
+        # A hack to bypass model cloning for test
+        step_model.param_init_net.AddExternalOutput(zero_segment_id)
+        """ the CRF step """
+        # Do tile
+        prev_transpose = step_model.Transpose(
+            cell_t_prev,
+            [s('prev_transpose')],
+            axes=(0, 2, 1),
+        )
+        prev_tiled = step_model.net.Tile(
+            prev_transpose,
+            [s('prev_tiled')],
+            tiles=self.num_classes_padded,
+            axis=2,
+        )
+        input_t_tiled = step_model.net.Tile(
+            input_t,
+            [s('input_t_tiled')],
+            tiles=self.num_classes_padded,
+            axis=1,
+        )
+        input_with_prev = step_model.net.Add(
+            [prev_tiled, input_t_tiled],
+            [s('input_with_prev')]
+        )
+        all_with_transitions = step_model.net.Add(
+            [input_with_prev, transitions],
+            [s('prev_with_transitions')],
+            broadcast=1,
+            use_grad_hack=1,
+        )
+        all_with_transitions_reshaped, _ = step_model.net.Reshape(
+            all_with_transitions,
+            [s('all_with_transitions_reshaped'), s('all_with_transitions_orig')],
+            shape=(self.num_classes_padded, self.num_classes_padded)
+        )
+        cell_t = step_model.net.SortedSegmentRangeLogSumExp(
+            [all_with_transitions_reshaped, zero_segment_id],
+            [s('cell_t')],
+        )
+        step_model.net.AddExternalOutputs(cell_t)
+        """ recurrent network """
+        cell_input_blob = initial_state
+        out_all, out_last = recurrent.recurrent_net(
+            net=self.model.net,
+            cell_net=step_model.net,
+            inputs=[(input_t, input_blob)],
+            initial_cell_inputs=[
+                (cell_t_prev, cell_input_blob),
+            ],
+            links={
+                cell_t_prev: cell_t,
+            },
+            scope=scope,
+            outputs_with_grads=(1,)
+        )
+        return out_last
 
     def update_predictions(self, classes):
 

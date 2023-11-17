@@ -22,8 +22,9 @@ class TestGatherOps(hu.HypothesisTestCase):
             ['data', 'ind'], 
             ['output'])
         def ref_gather(data, ind):
-            output = [r for r in [data[i] for i in ind]]
+            output = [data[i] for i in ind]
             return [output]
+
         self.assertReferenceChecks(
             gc,
             op=op,

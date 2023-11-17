@@ -9,10 +9,7 @@ from __future__ import unicode_literals
 def concat(model, blobs_in, blob_out, order="NCHW", **kwargs):
     """Depth Concat."""
     return model.net.Concat(
-        blobs_in,
-        [blob_out, "_" + blob_out + "_concat_dims"],
-        order=order,
-        **kwargs
+        blobs_in, [blob_out, f"_{blob_out}_concat_dims"], order=order, **kwargs
     )[0]
 
 

@@ -32,7 +32,7 @@ class RNNCell(object):
         self.forward_only = forward_only
 
     def scope(self, name):
-        return self.name + '/' + name if self.name is not None else name
+        return f'{self.name}/{name}' if self.name is not None else name
 
     def apply_over_sequence(
         self,
@@ -48,9 +48,9 @@ class RNNCell(object):
             'input_t',
             'timestep',
         )
-        states_prev = step_model.net.AddScopedExternalInputs(*[
-            s + '_prev' for s in self.get_state_names()
-        ])
+        states_prev = step_model.net.AddScopedExternalInputs(
+            *[f'{s}_prev' for s in self.get_state_names()]
+        )
         states = self._apply(
             model=step_model,
             input_t=input_t,
@@ -429,10 +429,7 @@ class DropoutCell(RNNCell):
             with core.NameScope(self.name or ''):
                 output, _ = model.net.Dropout(
                     output,
-                    [
-                        str(output) + '_with_dropout',
-                        str(output) + '_dropout_mask',
-                    ],
+                    [f'{str(output)}_with_dropout', f'{str(output)}_dropout_mask'],
                     ratio=float(self.dropout_ratio),
                 )
         return output
@@ -483,9 +480,7 @@ class MultiRNNCell(RNNCell):
                 if self.state_names.count(state_name) > 1
             }
             raise RuntimeError(
-                'Duplicate state names in MultiRNNCell: {}'.format(
-                    list(duplicates),
-                ),
+                f'Duplicate state names in MultiRNNCell: {list(duplicates)}'
             )
 
     def prepare_input(self, model, input_blob):
@@ -536,7 +531,7 @@ class MultiRNNCell(RNNCell):
                 if i > 0 and i in self.residual_output_layers:
                     layer_input = model.net.Sum(
                         [layer_output, layer_input],
-                        self.scope('residual_output_{}'.format(i)),
+                        self.scope(f'residual_output_{i}'),
                     )
                 else:
                     layer_input = layer_output
@@ -548,9 +543,7 @@ class MultiRNNCell(RNNCell):
         return self.state_names
 
     def get_output_state_index(self):
-        index = 0
-        for cell in self.cells[:-1]:
-            index += len(cell.get_state_names())
+        index = sum(len(cell.get_state_names()) for cell in self.cells[:-1])
         index += self.cells[-1].get_output_state_index()
         return index
 
@@ -562,9 +555,9 @@ class MultiRNNCell(RNNCell):
         )
 
         if (len(self.cells) - 1) in self.residual_output_layers:
-            last_layer_input_index = 0
-            for cell in self.cells[:-2]:
-                last_layer_input_index += len(cell.get_state_names())
+            last_layer_input_index = sum(
+                len(cell.get_state_names()) for cell in self.cells[:-2]
+            )
             last_layer_input_index += self.cells[-2].get_output_state_index()
             last_layer_input = states[last_layer_input_index]
             output = model.net.Sum(
@@ -581,9 +574,9 @@ class MultiRNNCell(RNNCell):
         )
 
         if (len(self.cells) - 1) in self.residual_output_layers:
-            last_layer_input_index = 0
-            for cell in self.cells[:-2]:
-                last_layer_input_index += 2 * len(cell.get_state_names())
+            last_layer_input_index = sum(
+                2 * len(cell.get_state_names()) for cell in self.cells[:-2]
+            )
             last_layer_input_index += (
                 2 * self.cells[-2].get_output_state_index()
             )
@@ -790,7 +783,7 @@ class LSTMWithAttentionCell(AttentionCell):
             hidden_size=decoder_state_dim,
             forget_bias=forget_bias,
             memory_optimization=lstm_memory_optimization,
-            name='{}/decoder'.format(name),
+            name=f'{name}/decoder',
             forward_only=False,
             drop_states=False,
         )
@@ -828,7 +821,7 @@ class MILSTMWithAttentionCell(AttentionCell):
             hidden_size=decoder_state_dim,
             forget_bias=forget_bias,
             memory_optimization=lstm_memory_optimization,
-            name='{}/decoder'.format(name),
+            name=f'{name}/decoder',
             forward_only=False,
             drop_states=False,
         )
@@ -909,7 +902,7 @@ def _LSTM(
 
     cells = []
     for i in range(num_layers):
-        name = '{}/layer_{}'.format(scope, i) if num_layers > 1 else scope
+        name = f'{scope}/layer_{i}' if num_layers > 1 else scope
         cell = cell_class(
             input_size=(dim_in if i == 0 else dim_out[i - 1]),
             hidden_size=dim_out[i],
@@ -934,25 +927,25 @@ def _LSTM(
         initial_states = []
         for i in range(num_layers):
             with core.NameScope(scope):
-                suffix = '_{}'.format(i) if num_layers > 1 else ''
+                suffix = f'_{i}' if num_layers > 1 else ''
                 initial_hidden = model.param_init_net.ConstantFill(
                     [],
-                    'initial_hidden_state' + suffix,
+                    f'initial_hidden_state{suffix}',
                     shape=[dim_out[i]],
                     value=0.0,
                 )
                 initial_cell = model.param_init_net.ConstantFill(
                     [],
-                    'initial_cell_state' + suffix,
+                    f'initial_cell_state{suffix}',
                     shape=[dim_out[i]],
                     value=0.0,
                 )
                 initial_states.extend([initial_hidden, initial_cell])
                 model.params.extend([initial_hidden, initial_cell])
 
-    assert len(initial_states) == 2 * num_layers, \
-            "Incorrect initial_states, was expecting 2 * num_layers elements" \
-            + " but had only {}".format(len(initial_states))
+    assert (
+        len(initial_states) == 2 * num_layers
+    ), f"Incorrect initial_states, was expecting 2 * num_layers elements but had only {len(initial_states)}"
 
     # outputs_with_grads argument indexes into final layer
     outputs_with_grads = [4 * (num_layers - 1) + i for i in outputs_with_grads]
@@ -1271,16 +1264,16 @@ def _layered_LSTM(
     assert len(dim_out) != 0, "dim_out list can't be empty"
     assert return_params is False, "return_params not supported for layering"
     for i, output_dim in enumerate(dim_out):
-        params.update({
-            'dim_out': output_dim
-        })
+        params['dim_out'] = output_dim
         output, last_output, all_states, last_state = create_lstm(**params)
-        params.update({
-            'input_blob': output,
-            'dim_in': output_dim,
-            'initial_states': (last_output, last_state),
-            'scope': scope + '_layer_{}'.format(i + 1)
-        })
+        params.update(
+            {
+                'input_blob': output,
+                'dim_in': output_dim,
+                'initial_states': (last_output, last_state),
+                'scope': f'{scope}_layer_{i + 1}',
+            }
+        )
     return output, last_output, all_states, last_state
 
 

@@ -773,24 +773,12 @@ class RNNCellTest(hu.HypothesisTestCase):
         gates_b_list = []
 
         for i in range(num_layers):
-            hidden_input_list.append(
-                workspace.FetchBlob('test/initial_hidden_state_{}'.format(i)),
-            )
-            cell_input_list.append(
-                workspace.FetchBlob('test/initial_cell_state_{}'.format(i)),
-            )
-            i2h_w_list.append(
-                workspace.FetchBlob('test/layer_{}/i2h_w'.format(i)),
-            )
-            i2h_b_list.append(
-                workspace.FetchBlob('test/layer_{}/i2h_b'.format(i)),
-            )
-            gates_w_list.append(
-                workspace.FetchBlob('test/layer_{}/gates_t_w'.format(i)),
-            )
-            gates_b_list.append(
-                workspace.FetchBlob('test/layer_{}/gates_t_b'.format(i)),
-            )
+            hidden_input_list.append(workspace.FetchBlob(f'test/initial_hidden_state_{i}'))
+            cell_input_list.append(workspace.FetchBlob(f'test/initial_cell_state_{i}'))
+            i2h_w_list.append(workspace.FetchBlob(f'test/layer_{i}/i2h_w'))
+            i2h_b_list.append(workspace.FetchBlob(f'test/layer_{i}/i2h_b'))
+            gates_w_list.append(workspace.FetchBlob(f'test/layer_{i}/gates_t_w'))
+            gates_b_list.append(workspace.FetchBlob(f'test/layer_{i}/gates_t_b'))
 
         workspace.RunNetOnce(model.net)
         h_all_calc = workspace.FetchBlob(h_all)

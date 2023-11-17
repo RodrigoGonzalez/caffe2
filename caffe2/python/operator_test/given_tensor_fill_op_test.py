@@ -22,7 +22,7 @@ class TestGivenTensorFillOps(hu.HypothesisTestCase):
            **hu.gcs_cpu_only)
     def test_given_tensor_fill(self, X, t, gc, dc):
         X = X.astype(t[1])
-        print('X: ', str(X))
+        print('X: ', X)
         op = core.CreateOperator(
             t[2], [], ["Y"],
             shape=X.shape,

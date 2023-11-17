@@ -35,13 +35,14 @@ class SparseLookup(ModelLayer):
 
         if isinstance(inner_shape, int):
             inner_shape = [inner_shape]
-        assert isinstance(inner_shape, list) or isinstance(inner_shape, tuple),\
-            "Unexpected type for inner_shape, expected list or tuple, got {0}".\
-            format(type(inner_shape))
+        assert isinstance(
+            inner_shape, (list, tuple)
+        ), "Unexpected type for inner_shape, expected list or tuple, got {0}".format(
+            type(inner_shape)
+        )
 
         # TODO Add some asserts about input type
-        assert reducer in self._supported_reducers, "Unsupported reducer: {}".\
-            format(reducer)
+        assert reducer in self._supported_reducers, f"Unsupported reducer: {reducer}"
         self.reducer = reducer
 
         input_dim = get_categorical_limit(input_record)
@@ -49,8 +50,7 @@ class SparseLookup(ModelLayer):
         assert input_dim is not None, "Unbounded features are not supported"
 
         self.output_schema = schema.Scalar(
-            (np.float32, inner_shape),
-            model.net.NextScopedBlob(name + '_output'),
+            (np.float32, inner_shape), model.net.NextScopedBlob(f'{name}_output')
         )
 
         scale = math.sqrt(1.0 / input_dim)
@@ -58,7 +58,7 @@ class SparseLookup(ModelLayer):
         self.weight_init = weight_init if weight_init else (
             'UniformFill', {'min': -scale, 'max': scale})
 
-        self.w = model.net.NextScopedBlob(name + "_w")
+        self.w = model.net.NextScopedBlob(f"{name}_w")
         if schema.equal_schemas(self.input_record, IdList):
             sparse_key = self.input_record.items()
         elif schema.equal_schemas(
@@ -98,20 +98,20 @@ class SparseLookup(ModelLayer):
     def add_ops(self, net):
         if schema.equal_schemas(self.input_record, IdList):
             if self.reducer in ['Sum', 'Mean']:
-                net.__getattr__('SparseLengths' + self.reducer)(
+                net.__getattr__(f'SparseLengths{self.reducer}')(
                     [
                         self.w,
                         self.input_record.items(),
-                        self.input_record.lengths()
+                        self.input_record.lengths(),
                     ],
                     self.output_schema.field_blobs(),
-                    engine='fp16'
+                    engine='fp16',
                 )
             elif self.reducer == 'Sqrt':
                 sqrt_weight = net.LengthsToWeights(
                     [self.input_record.lengths()],
-                    [self.input_record.lengths() + '_sqrt'],
-                    power=0.5
+                    [f'{self.input_record.lengths()}_sqrt'],
+                    power=0.5,
                 )
                 net.SparseLengthsWeightedSum(
                     [
@@ -127,26 +127,27 @@ class SparseLookup(ModelLayer):
                 table_rows = net.Gather([self.w, self.input_record.items()])
                 segment_ids = net.LengthsToSegmentIds(
                     self.input_record.lengths(),
-                    self.input_record.lengths() + '_sid')
-                net.__getattr__('SortedSegmentRange' + self.reducer)(
+                    f'{self.input_record.lengths()}_sid',
+                )
+                net.__getattr__(f'SortedSegmentRange{self.reducer}')(
                     [table_rows, segment_ids],
                     self.output_schema.field_blobs(),
-                    engine='fp16'
+                    engine='fp16',
                 )
         elif schema.equal_schemas(
                 self.input_record,
                 IdScoreList,
                 check_field_types=False):
             if self.reducer in ['Sum', 'Mean']:
-                net.__getattr__('SparseLengthsWeighted' + self.reducer)(
+                net.__getattr__(f'SparseLengthsWeighted{self.reducer}')(
                     [
                         self.w,
                         self.input_record.values(),
                         self.input_record.keys(),
-                        self.input_record.lengths()
+                        self.input_record.lengths(),
                     ],
                     self.output_schema.field_blobs(),
-                    engine='fp16'
+                    engine='fp16',
                 )
             elif self.reducer == 'PositionWeighted':
                 net.SparseLengthsWeightedSum(
@@ -161,7 +162,6 @@ class SparseLookup(ModelLayer):
                     engine='fp16'
                 )
             else:
-                raise "Only Sum, Mean is supported for IdScoreList input." +\
-                    "Trying to create with {}".format(self.reducer)
+                raise f"Only Sum, Mean is supported for IdScoreList input.Trying to create with {self.reducer}"
         else:
             raise "Unsupported input type {0}".format(self.input_record)

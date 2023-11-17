@@ -62,8 +62,9 @@ class NetBuilder(object):
         self._current_net = None
 
     def _assert_mutable(self):
-        assert not self._frozen, (
-            'This NetBuilder (%s) has been built already.' % self.name)
+        assert (
+            not self._frozen
+        ), f'This NetBuilder ({self.name}) has been built already.'
 
     def add(self, child):
         self._assert_mutable()
@@ -95,9 +96,9 @@ class NetBuilder(object):
         self.freeze()
         if etype is not None:
             return
-        assert (not self._stop_blob_required) or self._stop_blob is not None, (
-            'This NetBuilder (%s) requires a stop condition ' % self.name +
-            'to be set with `stop` or `stop_if`')
+        assert (
+            not self._stop_blob_required
+        ) or self._stop_blob is not None, f'This NetBuilder ({self.name}) requires a stop condition to be set with `stop` or `stop_if`'
 
     def __str__(self):
         return self.name or 'Un-named NetBuilder'

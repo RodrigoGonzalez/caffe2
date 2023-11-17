@@ -141,9 +141,8 @@ class Reader(object):
         if external_should_stop is not None:
             should_stop = reader_net.Or([external_should_stop, should_stop])
         read_step = core.execution_step(
-            '{}_step'.format(reader_net_name),
-            reader_net,
-            should_stop_blob=should_stop)
+            f'{reader_net_name}_step', reader_net, should_stop_blob=should_stop
+        )
         return (read_step, fields)
 
 

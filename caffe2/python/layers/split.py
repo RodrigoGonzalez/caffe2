@@ -23,8 +23,8 @@ class Split(ModelLayer):
         assert axis >= 0
 
         assert isinstance(input_record, schema.Scalar),\
-            "Incorrect input type. Excpected Scalar, but received: {0}".\
-            format(input_record)
+                "Incorrect input type. Excpected Scalar, but received: {0}".\
+                format(input_record)
 
         input_shape = input_record.field_type().shape
         assert len(input_shape) >= axis
@@ -38,7 +38,7 @@ class Split(ModelLayer):
         output_scalars = [
             schema.Scalar(
                 (data_type, output_shape),
-                model.net.NextScopedBlob(name + '_output_{}'.format(i)),
+                model.net.NextScopedBlob(f'{name}_output_{i}'),
             )
             for i in range(num_splits)
         ]

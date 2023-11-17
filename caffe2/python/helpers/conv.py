@@ -31,10 +31,7 @@ def _ConvBase(
 ):
     kernels = []
     if is_nd:
-        if not isinstance(kernel, list):
-            kernels = [kernel]
-        else:
-            kernels = kernel
+        kernels = [kernel] if not isinstance(kernel, list) else kernel
     else:
         kernels = [kernel] * 2
 
@@ -44,8 +41,7 @@ def _ConvBase(
         if ws_nbytes_limit:
             kwargs['ws_nbytes_limit'] = ws_nbytes_limit
 
-    use_bias =\
-            False if ("no_bias" in kwargs and kwargs["no_bias"]) else True
+    use_bias = "no_bias" not in kwargs or not kwargs["no_bias"]
     blob_out = blob_out or model.net.NextName()
     weight_shape = [dim_out]
     if order == "NCHW":
@@ -66,24 +62,22 @@ def _ConvBase(
         BiasInitializer = initializers.ExternalInitializer()
 
     weight = model.create_param(
-        param_name=blob_out + '_w',
+        param_name=f'{blob_out}_w',
         shape=weight_shape,
         initializer=weight_initializer,
-        tags=ParameterTags.WEIGHT
+        tags=ParameterTags.WEIGHT,
     )
     if use_bias:
         bias = model.create_param(
-            param_name=blob_out + '_b',
-            shape=[dim_out, ],
+            param_name=f'{blob_out}_b',
+            shape=[
+                dim_out,
+            ],
             initializer=bias_initializer,
-            tags=ParameterTags.BIAS
+            tags=ParameterTags.BIAS,
         )
 
-    if use_bias:
-        inputs = [blob_in, weight, bias]
-    else:
-        inputs = [blob_in, weight]
-
+    inputs = [blob_in, weight, bias] if use_bias else [blob_in, weight]
     if transform_inputs is not None:
         transform_inputs(model, blob_out, inputs)
 
@@ -182,22 +176,19 @@ def conv_transpose(
     )
     if model.init_params:
         weight = model.param_init_net.__getattr__(weight_init[0])(
-            [],
-            blob_out + '_w',
-            shape=weight_shape,
-            **weight_init[1]
+            [], f'{blob_out}_w', shape=weight_shape, **weight_init[1]
         )
         bias = model.param_init_net.__getattr__(bias_init[0])(
             [],
-            blob_out + '_b',
-            shape=[dim_out, ],
-            **bias_init[1]
+            f'{blob_out}_b',
+            shape=[
+                dim_out,
+            ],
+            **bias_init[1],
         )
     else:
-        weight = core.ScopedBlobReference(
-            blob_out + '_w', model.param_init_net)
-        bias = core.ScopedBlobReference(
-            blob_out + '_b', model.param_init_net)
+        weight = core.ScopedBlobReference(f'{blob_out}_w', model.param_init_net)
+        bias = core.ScopedBlobReference(f'{blob_out}_b', model.param_init_net)
     model.AddParameter(weight, ParameterTags.WEIGHT)
     model.AddParameter(bias, ParameterTags.BIAS)
     if use_cudnn:
@@ -259,7 +250,7 @@ def group_conv_deprecated(
     """
     weight_init = weight_init if weight_init else ('XavierFill', {})
     bias_init = bias_init if bias_init else ('ConstantFill', {})
-    use_bias = False if ("no_bias" in kwargs and kwargs["no_bias"]) else True
+    use_bias = "no_bias" not in kwargs or not kwargs["no_bias"]
     if use_cudnn:
         kwargs['engine'] = 'CUDNN'
         kwargs['exhaustive_search'] = cudnn_exhaustive_search
@@ -271,9 +262,9 @@ def group_conv_deprecated(
         raise ValueError("dim_out should be divisible by group.")
     splitted_blobs = model.net.DepthSplit(
         blob_in,
-        ['_' + blob_out + '_gconv_split_' + str(i) for i in range(group)],
-        dimensions=[int(dim_in / group) for i in range(group)],
-        order=order
+        [f'_{blob_out}_gconv_split_{str(i)}' for i in range(group)],
+        dimensions=[int(dim_in / group) for _ in range(group)],
+        order=order,
     )
     weight_shape = (
         [dim_out / group, dim_in / group, kernel, kernel]
@@ -308,10 +299,7 @@ def group_conv_deprecated(
         model.AddParameter(weight, ParameterTags.WEIGHT)
         if use_bias:
             model.AddParameter(bias, ParameterTags.BIAS)
-        if use_bias:
-            inputs = [weight, bias]
-        else:
-            inputs = [weight]
+        inputs = [weight, bias] if use_bias else [weight]
         if 'no_bias' in kwargs:
             del kwargs['no_bias']
         conv_blobs.append(
@@ -324,9 +312,6 @@ def group_conv_deprecated(
             )
         )
     concat, concat_dims = model.net.Concat(
-        conv_blobs,
-        [blob_out,
-         "_" + blob_out + "_concat_dims"],
-        order=order
+        conv_blobs, [blob_out, f"_{blob_out}_concat_dims"], order=order
     )
     return concat

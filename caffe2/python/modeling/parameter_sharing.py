@@ -93,9 +93,9 @@ def ParameterSharing(shared_scopes):
     shared_scope_overrides = {}
     current_scope = scope.CurrentNameScope()
     for k, v in shared_scopes.items():
-        assert not v.startswith(k), (
-            "Illegal override for parameter sharing. {} is prefix of {}".
-            format(k, v))
+        assert not v.startswith(
+            k
+        ), f"Illegal override for parameter sharing. {k} is prefix of {v}"
         k = current_scope + k
         v = current_scope + v
         # Normalize all the scopes, so scope_a and scope_a/ are equivalent

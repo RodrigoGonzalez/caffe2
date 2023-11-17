@@ -41,8 +41,8 @@ def accuracy(model, blob_in, blob_out, **kwargs):
 
     # We support top_k > 1 only on CPU
     if not is_cpu and 'top_k' in kwargs and kwargs['top_k'] > 1:
-        pred_host = model.net.CopyGPUToCPU(blob_in[0], blob_in[0] + "_host")
-        label_host = model.net.CopyGPUToCPU(blob_in[1], blob_in[1] + "_host")
+        pred_host = model.net.CopyGPUToCPU(blob_in[0], f"{blob_in[0]}_host")
+        label_host = model.net.CopyGPUToCPU(blob_in[1], f"{blob_in[1]}_host")
 
         # Now use the Host version of the accuracy op
         model.net.Accuracy(

@@ -42,8 +42,13 @@ def share_grad_blobs(
         name = str(b)
         # Note: need to look at _{namescope} pattern as it matches
         # to handle the auto-split gradients
-        return "_grad" in name and (name.startswith(namescope) or
-            name.startswith("_" + namescope)) and name not in param_grads
+        return (
+            "_grad" in name
+            and (
+                name.startswith(namescope) or name.startswith(f"_{namescope}")
+            )
+            and name not in param_grads
+        )
 
     def is_grad_op(op):
         # TODO: something smarter
@@ -65,7 +70,7 @@ def share_grad_blobs(
     # Hacky way to get activations, think of a better way
     for op in net.Proto().op:
         for b in op.output:
-            if b + "_w" in op.input and b not in external_output:
+            if f"{b}_w" in op.input and b not in external_output:
                 activations.append(b)
 
     # Remove last activations, as they are usually accessed externally
@@ -367,7 +372,7 @@ def _build_tree(paths):
     node_set = {y for x in paths for y in x}
     g.add_nodes_from(node_set)
     for cp in paths:
-        for ce in zip(cp[0:-1], cp[1:]):
+        for ce in zip(cp[:-1], cp[1:]):
             g.add_edge(ce[1], ce[0])
 
     root = paths[0][-1]
@@ -454,20 +459,14 @@ def compute_ranges(linearized_ops, blob_sizes=None):
     for i, op in enumerate(linearized_ops):
         for blob in op.input:
             used = blobs[blob].used
-            if used is None:
-                used = i
-            else:
-                used = max(used, i)
+            used = i if used is None else max(used, i)
             blobs[blob] = blobs[blob]._replace(used=used)
             blob_size = blob_sizes[blob] if blob_sizes else None
             assert not blob_sizes or blob_size is not None
             blobs[blob] = blobs[blob]._replace(size=blob_size)
         for blob in op.output:
             defined = blobs[blob].defined
-            if defined is None:
-                defined = i
-            else:
-                defined = min(defined, i)
+            defined = i if defined is None else min(defined, i)
             blobs[blob] = blobs[blob]._replace(defined=defined)
             blob_size = blob_sizes[blob] if blob_sizes else None
             assert not blob_sizes or blob_size is not None
@@ -500,16 +499,13 @@ def compute_blob_assignments(assignments):
 def _get_max_size(assignment):
     if not assignment:
         return 0
-    ret = max([x[1].size for x in assignment])
+    ret = max(x[1].size for x in assignment)
     ret = 0 if ret is None else ret
     return ret
 
 
 def get_memory_usage(assignments):
-    ret = 0
-    for cur in assignments:
-        ret += _get_max_size(cur)
-    return ret
+    return sum(_get_max_size(cur) for cur in assignments)
 
 
 def compute_assignments_greedy(ranges_sorted, init_assignments=None):
@@ -540,9 +536,7 @@ def compute_assignments_greedy(ranges_sorted, init_assignments=None):
 
 def _get_count(assignments):
     ''' Return number of blobs in assignments '''
-    if assignments:
-        return sum([len(x) for x in assignments])
-    return 0
+    return sum(len(x) for x in assignments) if assignments else 0
 
 
 def compute_assignments_dp(ranges_sorted, init_assignment, counter=None):
@@ -582,7 +576,7 @@ def compute_assignments_dp(ranges_sorted, init_assignment, counter=None):
         '''
         def is_compatible_all(candidate_range, assignments):
             ''' return true if compatiable for all assignments in assignments '''
-            return all([is_compatible(candidate_range[1], x, []) for x in assignments])
+            return all(is_compatible(candidate_range[1], x, []) for x in assignments)
 
         ii = cur_idx - 1
         while ii >= 0:
@@ -608,7 +602,7 @@ def compute_assignments_dp(ranges_sorted, init_assignment, counter=None):
         find_range = ranges[-1]
         # Blobs in ranges[0:-1] are incompatible with ranges[-1] so that we can
         # reduce it to a smaller problem.
-        assert all(not is_compatible(x[1], [find_range], []) for x in ranges[0:-1])
+        assert all(not is_compatible(x[1], [find_range], []) for x in ranges[:-1])
 
         sz = len(init_assignment)
         best_candidates = []
@@ -718,7 +712,7 @@ def compute_assignments(ranges, static_blobs, algo):
     # Static blobs, not sharable
     ranges_static = [x for x in ranges if x[0] in static_blobs]
 
-    log.info("Total sharable blobs {}".format(len(ranges_sharable)))
+    log.info(f"Total sharable blobs {len(ranges_sharable)}")
 
     best_assignment = []
     if algo == AssignmentAlgorithm.DYNAMIC_PROGRAMMING:
@@ -726,7 +720,7 @@ def compute_assignments(ranges, static_blobs, algo):
     elif algo == AssignmentAlgorithm.GREEDY:
         best_assignment = compute_assignments_greedy(ranges_sharable, [])
     else:
-        assert "Invalid algo name {}".format(algo)
+        assert f"Invalid algo name {algo}"
     best_assignment += [[x] for x in ranges_static]
 
     # verify_assignments(best_assignment)
@@ -736,7 +730,7 @@ def compute_assignments(ranges, static_blobs, algo):
 
 def verify_assignments(assignments):
     for cur in assignments:
-        for x, y in zip(cur[0:-1], cur[1:]):
+        for x, y in zip(cur[:-1], cur[1:]):
             assert x[1].used < y[1].defined
 
 
@@ -761,9 +755,7 @@ Optimization = collections.namedtuple(
 
 def apply_assignments(net, blob_assignments):
     def canonical_name(blob):
-        if blob not in blob_assignments:
-            return blob
-        return blob_assignments[blob]
+        return blob if blob not in blob_assignments else blob_assignments[blob]
 
     for op in net.op:
         # Descend into subnets of the recurrent network
@@ -777,7 +769,7 @@ def apply_assignments(net, blob_assignments):
 
 
 def apply_recurrent_blob_assignments(op, blob_assignments, canonical_name):
-    log.debug("Applying assignments to recurrent op: {}".format(op.type))
+    log.debug(f"Applying assignments to recurrent op: {op.type}")
     import google.protobuf.text_format as protobuftx
     step_args = [a for a in op.arg if a.name.endswith("step_net")]
     for step_arg in step_args:
@@ -792,7 +784,7 @@ def apply_recurrent_blob_assignments(op, blob_assignments, canonical_name):
     for blob, renamed in blob_assignments.items():
         if blob in list(op.input) + list(op.output):
             a = caffe2_pb2.Argument()
-            a.name = blob + ".rename"
+            a.name = f"{blob}.rename"
             a.s = str(renamed)
             op.arg.extend([a])
 

@@ -34,7 +34,7 @@ class TestPartitionOps(TestCase):
 
     def testPartition(self):
         for main_dims, parts, main_type, extra_ins, pack in self.test_configs():
-            ins = ['in' + str(i) for i in range(1 + len(extra_ins))]
+            ins = [f'in{str(i)}' for i in range(1 + len(extra_ins))]
             outs = [
                 'in{}_p{}'.format(i, j)
                 for i in range(parts) for j in range(1 + len(extra_ins))
@@ -69,9 +69,7 @@ class TestPartitionOps(TestCase):
                                 accum.append(data[j])
 
                         def join(a):
-                            if not a:
-                                return np.empty(shape=(0, ) + suffix_shape)
-                            return np.stack(a)
+                            return np.empty(shape=(0, ) + suffix_shape) if not a else np.stack(a)
 
                         out.append(join(accum))
                 return out
@@ -90,7 +88,7 @@ class TestPartitionOps(TestCase):
             # For LengthsSharding only 1-D tensors supported as a first input
             if len(main_dims) > 1:
                 continue
-            ins = ['in' + str(i) for i in range(2 + len(extra_ins))]
+            ins = [f'in{str(i)}' for i in range(2 + len(extra_ins))]
             outs = [
                 'in{}_p{}'.format(j, i)
                 for i in range(parts) for j in range(2 + len(extra_ins))
@@ -146,9 +144,7 @@ class TestPartitionOps(TestCase):
                                 accum.append(data[j])
 
                         def join(a):
-                            if not a:
-                                return np.empty(shape=(0, ) + suffix_shape)
-                            return np.stack(a)
+                            return np.empty(shape=(0, ) + suffix_shape) if not a else np.stack(a)
 
                         out.append(join(accum))
                 return out

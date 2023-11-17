@@ -225,7 +225,7 @@ class BeamSearchForwardOnly(object):
             )
             state_chosen_per_hypo = self.step_model.net.Gather(
                 [state_flattened, hypo_t_int32],
-                str(state_config.state_link.blob) + '_chosen_per_hypo',
+                f'{str(state_config.state_link.blob)}_chosen_per_hypo',
             )
             return self.StateConfig(
                 initial_value=state_config.initial_value,
@@ -236,6 +236,7 @@ class BeamSearchForwardOnly(object):
                     window=state_config.state_link.window,
                 )
             )
+
         state_configs = [choose_state_per_hypo(c) for c in state_configs]
         initial_scores = self.model.param_init_net.ConstantFill(
             [],
@@ -269,7 +270,7 @@ class BeamSearchForwardOnly(object):
             value=0.0,
             dtype=core.DataType.FLOAT,
         )
-        state_configs = state_configs + [
+        state_configs += [
             self.StateConfig(
                 initial_value=initial_scores,
                 state_prev_link=self.LinkConfig(self.scores_t_prev, 0, 1),
@@ -307,7 +308,7 @@ class BeamSearchForwardOnly(object):
         forward_links = []
         recurrent_states = []
         for state_config in state_configs:
-            state_name = str(state_config.state_prev_link.blob) + '_states'
+            state_name = f'{str(state_config.state_prev_link.blob)}_states'
             recurrent_states.append(state_name)
             forward_links.append((
                 state_config.state_prev_link.blob,
@@ -325,15 +326,14 @@ class BeamSearchForwardOnly(object):
             zip(*forward_links)
         )
         all_outputs = [
-            str(s) + '_all'
-            for s in [scores_t, tokens_t, hypo_t, attention_t]
+            f'{str(s)}_all' for s in [scores_t, tokens_t, hypo_t, attention_t]
         ]
         results = self.model.net.RecurrentNetwork(
             all_inputs,
             all_outputs + ['step_workspaces'],
             param=[all_inputs.index(p) for p in self.step_model.params],
             alias_src=[
-                str(s) + '_states'
+                f'{str(s)}_states'
                 for s in [
                     self.scores_t_prev,
                     self.tokens_t_prev,
@@ -391,9 +391,8 @@ class BeamSearchForwardOnly(object):
     def _max_int32(self, model, a_int32, b_int32, output_name):
         a_float = model.net.Cast(a_int32, 'a_float', to=core.DataType.FLOAT)
         b_float = model.net.Cast(b_int32, 'b_float', to=core.DataType.FLOAT)
-        m_float = model.net.Max([a_float, b_float], output_name + '_float')
-        m_int32 = model.net.Cast(m_float, output_name, to=core.DataType.INT32)
-        return m_int32
+        m_float = model.net.Max([a_float, b_float], f'{output_name}_float')
+        return model.net.Cast(m_float, output_name, to=core.DataType.INT32)
 
     # Function returns (beam_size if timestep == 0 else -1)
     def _hack_get_slice_end(self, param_init_model, model, timestep):
@@ -436,8 +435,6 @@ class BeamSearchForwardOnly(object):
             [BEAM_SIZE_PLUS_ONE, one_or_zero],
             'beam_size_plus_one_or_zero',
         )
-        beam_size_or_minus_one = model.net.Add(
-            [beam_size_plus_one_or_zero, MINUS_ONE_INT32],
-            'beam_size_or_minus_one'
+        return model.net.Add(
+            [beam_size_plus_one_or_zero, MINUS_ONE_INT32], 'beam_size_or_minus_one'
         )
-        return beam_size_or_minus_one

@@ -10,5 +10,4 @@ def dropout(model, blob_in, blob_out, use_cudnn=False, **kwargs):
     """dropout"""
     if use_cudnn:
         kwargs['engine'] = 'CUDNN'
-    return model.net.Dropout(
-        blob_in, [blob_out, "_" + blob_out + "_mask"], **kwargs)[0]
+    return model.net.Dropout(blob_in, [blob_out, f"_{blob_out}_mask"], **kwargs)[0]

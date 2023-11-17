@@ -47,7 +47,7 @@ class SamplingTrain(ModelLayer):
         )
 
         self._prediction_layer.train_param_blobs = [
-            model.net.NextBlob(str(blob) + '_sampled')
+            model.net.NextBlob(f'{str(blob)}_sampled')
             for blob in self._prediction_layer.param_blobs
         ]
 

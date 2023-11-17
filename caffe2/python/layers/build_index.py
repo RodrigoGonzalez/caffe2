@@ -29,7 +29,7 @@ class MapToRange(ModelLayer):
         assert isinstance(input_record, schema.Scalar)
 
         self.max_index = max_index
-        self.handler = model.net.NextScopedBlob(name + "_handler")
+        self.handler = model.net.NextScopedBlob(f"{name}_handler")
 
         self.params.append(
             LayerParameter(
@@ -44,7 +44,7 @@ class MapToRange(ModelLayer):
         )
 
         self.output_schema = schema.Scalar(
-            np.int64, model.net.NextScopedBlob(name + "_indices")
+            np.int64, model.net.NextScopedBlob(f"{name}_indices")
         )
 
     def add_train_ops(self, net):

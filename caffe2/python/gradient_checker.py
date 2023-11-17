@@ -18,7 +18,7 @@ class NetGradientChecker(object):
               threshold=0.05, print_net=True):
         assert input_to_check in input_values.keys()
 
-        net_copy = net.Clone(net.Name() + "_copy")
+        net_copy = net.Clone(f"{net.Name()}_copy")
 
         grad_map = net_copy.AddGradientOperators(outputs_with_grad)
         assert input_to_check in grad_map, (
@@ -31,10 +31,7 @@ class NetGradientChecker(object):
         def GetLoss(new_value):
             workspace.blobs[input_to_check] = new_value
             workspace.RunNetOnce(net_copy)
-            return sum([
-                workspace.blobs[output]
-                for output in outputs_with_grad
-            ]).sum()
+            return sum(workspace.blobs[output] for output in outputs_with_grad).sum()
 
         def GetValue(dim, delta):
             input_value = input_values[input_to_check].copy()
@@ -118,7 +115,7 @@ class GradientChecker:
             name = op.output[idx]
             arr = workspace.FetchBlob(name)
             loss += (arr**2).sum()
-            workspace.FeedBlob(name + '_grad', arr, self._device_option)
+            workspace.FeedBlob(f'{name}_grad', arr, self._device_option)
         loss /= 2.
         # Run gradient ops
         workspace.RunOperatorsOnce(grad_ops)
@@ -127,18 +124,25 @@ class GradientChecker:
             workspace.FeedBlob('zeros', np.zeros_like(x, dtype=np.float32))
             workspace.FeedBlob('ones', np.ones(1, dtype=np.float32))
             gv_cpu_op = core.CreateOperator(
-                'EnsureCPUOutput', grad_name.values, grad_name.values + '_cpu',
-                device_option=self._device_option
+                'EnsureCPUOutput',
+                grad_name.values,
+                f'{grad_name.values}_cpu',
+                device_option=self._device_option,
             )
             gi_cpu_op = core.CreateOperator(
-                'EnsureCPUOutput', grad_name.indices, grad_name.indices + '_cpu',
-                device_option=self._device_option
+                'EnsureCPUOutput',
+                grad_name.indices,
+                f'{grad_name.indices}_cpu',
+                device_option=self._device_option,
             )
             sparse_to_dense_op = core.CreateOperator(
                 'ScatterWeightedSum',
                 [
-                    'zeros', 'ones', grad_name.indices + '_cpu',
-                    grad_name.values + '_cpu', 'ones'
+                    'zeros',
+                    'ones',
+                    f'{grad_name.indices}_cpu',
+                    f'{grad_name.values}_cpu',
+                    'ones',
                 ],
                 'zeros',
             )
@@ -189,7 +193,8 @@ class GradientChecker:
             # TODO(jiayq): use the gradient registration instead of the old
             # hack.
             grad_ops, g_input = core.GradientRegistry.GetGradientForOp(
-                op, [s + '_grad' for s in op.output])
+                op, [f'{s}_grad' for s in op.output]
+            )
 
         dims_to_check = inputs[input_to_check].size
         # First, feed in the input.
@@ -209,8 +214,8 @@ class GradientChecker:
         grad_estimate = np.zeros_like(inputs[input_to_check])
         if grad_estimate.shape != grad.shape:
             raise Exception(
-                "Mismatched gradient shapes: estimated ({}), grad ({})".format(
-                    grad_estimate.shape, grad.shape))
+                f"Mismatched gradient shapes: estimated ({grad_estimate.shape}), grad ({grad.shape})"
+            )
 
         for current_dim in range(dims_to_check):
             # Positive gradient

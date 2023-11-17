@@ -28,13 +28,13 @@ class TestLeakyRelu(hu.HypothesisTestCase):
 
     def _get_op(self, device_option, alpha, order, inplace=False):
         outputs = ['output' if not inplace else "input"]
-        op = core.CreateOperator(
+        return core.CreateOperator(
             'LeakyRelu',
             ['input'],
             outputs,
             alpha=alpha,
-            device_option=device_option)
-        return op
+            device_option=device_option,
+        )
 
     def _feed_inputs(self, input_blobs, device_option):
         names = ['input', 'scale', 'bias']

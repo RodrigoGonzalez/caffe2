@@ -50,9 +50,7 @@ class OpDocGenerator(DocGenerator):
                 return 0
             if 'contrib' in x.split('/'):
                 return 2
-            if 'experiments' in x.split('/'):
-                return 3
-            return 1
+            return 3 if 'experiments' in x.split('/') else 1
 
         for name in core._GetRegisteredOperators():
             schema = OpSchema.get(name)
@@ -83,10 +81,7 @@ class OpDocGenerator(DocGenerator):
 
         def compare(op1, op2):
             if op1.priority == op2.priority:
-                if op1.name < op2.name:
-                    return -1
-                else:
-                    return 1
+                return -1 if op1.name < op2.name else 1
             return op1.priority - op2.priority
 
         return sorted(operators, cmp=compare)
@@ -106,13 +101,14 @@ class OperatorEngine(object):
         self.base_op_name, self.engine = name.split("_ENGINE_", 1)
 
     def getDeviceImpl(self):
-        deviceImplList = []
-        for device, impl in {'CPU': OpSchema.get_cpu_impl(self.op_name),
-                             'CUDA': OpSchema.get_cuda_impl(self.op_name)}.items():
-            if not impl:
-                continue
-            deviceImplList.append((device, impl))
-        return deviceImplList
+        return [
+            (device, impl)
+            for device, impl in {
+                'CPU': OpSchema.get_cpu_impl(self.op_name),
+                'CUDA': OpSchema.get_cuda_impl(self.op_name),
+            }.items()
+            if impl
+        ]
 
     def generateDoc(self, formatter):
         for device, impl in self.getDeviceImpl():
@@ -143,12 +139,9 @@ class OperatorDoc(object):
         if tuples:
             if title:
                 formatter.addHeader(title, 3)
-            table = []
-            if title_row:
-                table = [title_row]
-            for name, doc in tuples:
-                table.append([name, doc or ''])
-            formatter.addTable(table, (table == []))
+            table = [title_row] if title_row else []
+            table.extend([name, doc or ''] for name, doc in tuples)
+            formatter.addTable(table, not table)
 
     def generateInterface(self, formatter):
         def makeDesc(title, desc):

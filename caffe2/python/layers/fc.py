@@ -26,12 +26,11 @@ class FC(SamplingTrainableMixin, ModelLayer):
             "FC expects limited dimensions of the input tensor")
 
         input_dims = input_record.field_types()[0].shape[0]
-        assert input_dims > 0, (
-            "FC expects input dimensions > 0, got {}".format(input_dims))
+        assert input_dims > 0, f"FC expects input dimensions > 0, got {input_dims}"
 
         self.output_schema = schema.Scalar(
-            (np.float32, (output_dims, )),
-            model.net.NextScopedBlob(name + '_output')
+            (np.float32, (output_dims,)),
+            model.net.NextScopedBlob(f'{name}_output'),
         )
 
         scale = math.sqrt(1.0 / input_dims)
@@ -40,8 +39,8 @@ class FC(SamplingTrainableMixin, ModelLayer):
         bias_init = bias_init if bias_init else (
             'UniformFill', {'min': -scale, 'max': scale})
 
-        self.w = model.net.NextScopedBlob(name + "_w")
-        self.b = model.net.NextScopedBlob(name + "_b")
+        self.w = model.net.NextScopedBlob(f"{name}_w")
+        self.b = model.net.NextScopedBlob(f"{name}_b")
 
         self.params.append(
             LayerParameter(
