@@ -58,10 +58,7 @@ class TestUtilityOps(hu.HypothesisTestCase):
         # print(X)
 
         def nan_reference(X, Y):
-            if not np.isnan(X).any():
-                return [X]
-            else:
-                return [np.array([])]
+            return [X] if not np.isnan(X).any() else [np.array([])]
 
         op = core.CreateOperator(
             "NanCheck",
@@ -142,8 +139,7 @@ class TestUtilityOps(hu.HypothesisTestCase):
 
         def lengths_gather_op(items, lengths, indices):
             ends = np.cumsum(lengths)
-            return [np.concatenate(
-                list(items[ends[i] - lengths[i]:ends[i]] for i in indices))]
+            return [np.concatenate([items[ends[i] - lengths[i]:ends[i]] for i in indices])]
 
         op = core.CreateOperator(
             "LengthsGather",

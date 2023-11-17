@@ -66,16 +66,20 @@ def AddImageInput(model, reader, batch_size, img_size):
 
 
 def SaveModel(args, train_model, epoch):
-    prefix = "gpu_{}".format(train_model._devices[0])
+    prefix = f"gpu_{train_model._devices[0]}"
     predictor_export_meta = pred_exp.PredictorExportMeta(
         predict_net=train_model.net.Proto(),
         parameters=data_parallel_model.GetCheckpointParams(train_model),
-        inputs=[prefix + "/data"],
-        outputs=[prefix + "/softmax"],
+        inputs=[f"{prefix}/data"],
+        outputs=[f"{prefix}/softmax"],
         shapes={
-            prefix + "/softmax": (1, args.num_labels),
-            prefix + "/data": (args.num_channels, args.image_size, args.image_size)
-        }
+            f"{prefix}/softmax": (1, args.num_labels),
+            f"{prefix}/data": (
+                args.num_channels,
+                args.image_size,
+                args.image_size,
+            ),
+        },
     )
 
     # save the train_model for the current epoch
@@ -99,7 +103,7 @@ def LoadModel(path, model):
     '''
     Load pretrained model from file
     '''
-    log.info("Loading path: {}".format(path))
+    log.info(f"Loading path: {path}")
     meta_net_def = pred_exp.load_from_db(path, 'minidb')
     init_net = core.Net(pred_utils.GetNet(
         meta_net_def, predictor_constants.GLOBAL_INIT_NET_TYPE))
@@ -127,8 +131,10 @@ def RunEpoch(
     TODO: add checkpointing here.
     '''
     # TODO: add loading from checkpoint
-    log.info("Starting epoch {}/{}".format(epoch, args.num_epochs))
+    log.info(f"Starting epoch {epoch}/{args.num_epochs}")
     epoch_iters = int(args.epoch_size / total_batch_size / num_shards)
+    fmt = "Finished iteration {}/{} of epoch {} ({:.2f} images/sec)"
+    train_fmt = "Training loss: {}, accuracy: {}"
     for i in range(epoch_iters):
         # This timeout is required (temporarily) since CUDA-NCCL
         # operators might deadlock when synchronizing between GPUs.
@@ -139,19 +145,17 @@ def RunEpoch(
             t2 = time.time()
             dt = t2 - t1
 
-        fmt = "Finished iteration {}/{} of epoch {} ({:.2f} images/sec)"
         log.info(fmt.format(i + 1, epoch_iters, epoch, total_batch_size / dt))
-        prefix = "gpu_{}".format(train_model._devices[0])
-        accuracy = workspace.FetchBlob(prefix + '/accuracy')
-        loss = workspace.FetchBlob(prefix + '/loss')
-        train_fmt = "Training loss: {}, accuracy: {}"
+        prefix = f"gpu_{train_model._devices[0]}"
+        accuracy = workspace.FetchBlob(f'{prefix}/accuracy')
+        loss = workspace.FetchBlob(f'{prefix}/loss')
         log.info(train_fmt.format(loss, accuracy))
 
     num_images = epoch * epoch_iters * total_batch_size
-    prefix = "gpu_{}".format(train_model._devices[0])
-    accuracy = workspace.FetchBlob(prefix + '/accuracy')
-    loss = workspace.FetchBlob(prefix + '/loss')
-    learning_rate = workspace.FetchBlob(prefix + '/LR')
+    prefix = f"gpu_{train_model._devices[0]}"
+    accuracy = workspace.FetchBlob(f'{prefix}/accuracy')
+    loss = workspace.FetchBlob(f'{prefix}/loss')
+    learning_rate = workspace.FetchBlob(f'{prefix}/LR')
     test_accuracy = 0
     if (test_model is not None):
         # Run 100 iters of testing
@@ -159,9 +163,7 @@ def RunEpoch(
         for _ in range(0, 100):
             workspace.RunNet(test_model.net.Proto().name)
             for g in test_model._devices:
-                test_accuracy += np.asscalar(workspace.FetchBlob(
-                    "gpu_{}".format(g) + '/accuracy'
-                ))
+                test_accuracy += np.asscalar(workspace.FetchBlob(f"gpu_{g}/accuracy"))
                 ntests += 1
         test_accuracy /= ntests
     else:
@@ -387,10 +389,7 @@ def Train(args):
         # Save the model for each epoch
         SaveModel(args, train_model, epoch)
 
-        model_path = "%s/%s_" % (
-            args.file_store_path,
-            args.save_model_name
-        )
+        model_path = f"{args.file_store_path}/{args.save_model_name}_"
         # remove the saved model from the previous epoch if it exists
         if os.path.isfile(model_path + str(epoch - 1) + ".mdl"):
             os.remove(model_path + str(epoch - 1) + ".mdl")

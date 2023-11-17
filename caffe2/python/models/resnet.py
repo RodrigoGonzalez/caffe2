@@ -281,23 +281,21 @@ def create_resnet50(
 
     # Final dimension of the "image" is reduced to 7x7
     last_out = brew.fc(
-        model, final_avg, 'last_out_L{}'.format(num_labels), 2048, num_labels
+        model, final_avg, f'last_out_L{num_labels}', 2048, num_labels
     )
 
     if no_loss:
         return last_out
 
-    # If we create model for training, use softmax-with-loss
-    if (label is not None):
-        (softmax, loss) = model.SoftmaxWithLoss(
-            [last_out, label],
-            ["softmax", "loss"],
-        )
-
-        return (softmax, loss)
-    else:
+    if label is None:
         # For inference, we just return softmax
         return brew.softmax(model, last_out, "softmax")
+    (softmax, loss) = model.SoftmaxWithLoss(
+        [last_out, label],
+        ["softmax", "loss"],
+    )
+
+    return (softmax, loss)
 
 
 def create_resnet_32x32(
@@ -326,8 +324,8 @@ def create_resnet_32x32(
             builder.add_simple_block(
                 prev_filters if blockidx == 0 else filters[groupidx],
                 filters[groupidx],
-                down_sampling=(True if blockidx == 0 and
-                               groupidx > 0 else False))
+                down_sampling=blockidx == 0 and groupidx > 0,
+            )
         prev_filters = filters[groupidx]
 
     # Final layers

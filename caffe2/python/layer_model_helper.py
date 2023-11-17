@@ -55,8 +55,9 @@ class LayerModelHelper(model_helper.ModelHelper):
         self.param_init_net = self.create_init_net('param_init_net')
 
     def add_metric_field(self, name, value):
-        assert name not in self._metrics_schema.fields, (
-            "Try to add metric field twice: {}".format(name))
+        assert (
+            name not in self._metrics_schema.fields
+        ), f"Try to add metric field twice: {name}"
         self._metrics_schema = self._metrics_schema + schema.Struct(
             (name, value)
         )
@@ -70,12 +71,8 @@ class LayerModelHelper(model_helper.ModelHelper):
 
         if array is not None:
             assert initializer is None,\
-                "Only one from array and initializer should be specified"
-            if dtype is None:
-                array = np.array(array)
-            else:
-                array = np.array(array, dtype=dtype)
-
+                    "Only one from array and initializer should be specified"
+            array = np.array(array) if dtype is None else np.array(array, dtype=dtype)
             # TODO: make GivenTensor generic
             op_name = None
             if array.dtype == np.int32:
@@ -96,6 +93,7 @@ class LayerModelHelper(model_helper.ModelHelper):
                                            shape=array.shape,
                                            values=array.flatten().tolist()
                                            )
+
         else:
             assert initializer is not None
 
@@ -125,7 +123,7 @@ class LayerModelHelper(model_helper.ModelHelper):
         name = base_name
         index = 0
         while name in self._layer_names:
-            name = base_name + '_auto_' + str(index)
+            name = f'{base_name}_auto_{str(index)}'
             index += 1
 
         self._layer_names.add(name)
@@ -147,9 +145,7 @@ class LayerModelHelper(model_helper.ModelHelper):
     def get_parameter_blobs(self):
         param_blobs = []
         for layer in self._layers:
-            for param in layer.get_parameters():
-                param_blobs.append(param.parameter)
-
+            param_blobs.extend(param.parameter for param in layer.get_parameters())
         return param_blobs
 
     @property

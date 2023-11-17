@@ -54,9 +54,7 @@ def create_predict_init_net(ws, predictor_export_meta):
 
 
 def get_comp_name(string, name):
-    if name:
-        return string + '_' + name
-    return string
+    return f'{string}_{name}' if name else string
 
 
 def _ProtoMapGet(field, key):
@@ -64,10 +62,7 @@ def _ProtoMapGet(field, key):
     Given the key, get the value of the repeated field.
     Helper function used by protobuf since it doesn't have map construct
     '''
-    for v in field:
-        if (v.key == key):
-            return v.value
-    return None
+    return next((v.value for v in field if (v.key == key)), None)
 
 
 def GetPlan(meta_net_def, key):
@@ -80,9 +75,7 @@ def GetPlanOriginal(meta_net_def, key):
 
 def GetBlobs(meta_net_def, key):
     blobs = _ProtoMapGet(meta_net_def.blobs, key)
-    if blobs is None:
-        return []
-    return blobs
+    return [] if blobs is None else blobs
 
 
 def GetNet(meta_net_def, key):

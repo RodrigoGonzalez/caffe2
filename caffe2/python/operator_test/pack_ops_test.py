@@ -36,12 +36,16 @@ class TestTensorPackOps(hu.HypothesisTestCase):
 
                 # ((0, pad_length), (0, 0)) says add pad_length rows of padding
                 # below chunk and 0 rows of padding elsewhere
-                arr.append(np.pad(
-                    chunk,
-                    ((0, pad_length), (0, 0)),
-                    mode=str("constant"),
-                    constant_values=constant_values))
+                arr.append(
+                    np.pad(
+                        chunk,
+                        ((0, pad_length), (0, 0)),
+                        mode="constant",
+                        constant_values=constant_values,
+                    )
+                )
             return [arr]
+
         workspace.FeedBlob('l', lengths)
         workspace.FeedBlob('d', data)
         inputs = [lengths, data]

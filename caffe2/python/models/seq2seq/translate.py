@@ -34,11 +34,7 @@ def _weighted_sum(model, values, weight, output_name):
 class Seq2SeqModelCaffe2EnsembleDecoder(object):
 
     def scope(self, scope_name, blob_name):
-        return (
-            scope_name + '/' + blob_name
-            if scope_name is not None
-            else blob_name
-        )
+        return f'{scope_name}/{blob_name}' if scope_name is not None else blob_name
 
     def _build_decoder(
         self,
@@ -161,9 +157,9 @@ class Seq2SeqModelCaffe2EnsembleDecoder(object):
             )
             decoder_output_dim = decoder_num_units
 
-        states_prev = step_model.net.AddExternalInputs(*[
-            s + '_prev' for s in decoder_cell.get_state_names()
-        ])
+        states_prev = step_model.net.AddExternalInputs(
+            *[f'{s}_prev' for s in decoder_cell.get_state_names()]
+        )
         _, states = decoder_cell.apply(
             model=step_model,
             input_t=embedded_tokens_t_prev,
@@ -281,9 +277,7 @@ class Seq2SeqModelCaffe2EnsembleDecoder(object):
         self.source_vocab_size = len(source_vocab)
         self.target_vocab_size = len(target_vocab)
 
-        self.decoder_scope_names = [
-            'model{}'.format(i) for i in range(len(self.models))
-        ]
+        self.decoder_scope_names = [f'model{i}' for i in range(len(self.models))]
 
         self.model = Seq2SeqModelHelper(init_params=True)
 
@@ -336,7 +330,7 @@ class Seq2SeqModelCaffe2EnsembleDecoder(object):
             if attention_weights_per_decoder is not None:
                 attention_weights.append(attention_weights_per_decoder)
 
-        assert len(attention_weights) > 0
+        assert attention_weights
         num_decoders_with_attention_blob = (
             self.model.param_init_net.ConstantFill(
                 [],
@@ -420,24 +414,28 @@ class Seq2SeqModelCaffe2EnsembleDecoder(object):
                 for param in self.model.GetAllParams()
                 if str(param).startswith(scope_name)
             ]
-            assert workspace.RunOperatorOnce(core.CreateOperator(
-                'CreateDB',
-                [], [db_reader],
-                db=model['model_file'],
-                db_type='minidb')
-            ), 'Failed to create db {}'.format(model['model_file'])
-            assert workspace.RunOperatorOnce(core.CreateOperator(
-                'Load',
-                [db_reader],
-                params_for_current_model,
-                load_all=1,
-                add_prefix=scope_name + '/',
-                strip_prefix='gpu_0/',
-            ))
-            logger.info('Model {} is loaded from a checkpoint {}'.format(
-                scope_name,
-                model['model_file'],
-            ))
+            assert workspace.RunOperatorOnce(
+                core.CreateOperator(
+                    'CreateDB',
+                    [],
+                    [db_reader],
+                    db=model['model_file'],
+                    db_type='minidb',
+                )
+            ), f"Failed to create db {model['model_file']}"
+            assert workspace.RunOperatorOnce(
+                core.CreateOperator(
+                    'Load',
+                    [db_reader],
+                    params_for_current_model,
+                    load_all=1,
+                    add_prefix=f'{scope_name}/',
+                    strip_prefix='gpu_0/',
+                )
+            )
+            logger.info(
+                f"Model {scope_name} is loaded from a checkpoint {model['model_file']}"
+            )
 
     def decode(self, numberized_input, max_output_seq_len):
         workspace.FeedBlob(
@@ -512,13 +510,13 @@ def run_seq2seq_beam_decoder(args, model_params, decoding_params):
         args.source_corpus,
         args.unk_threshold,
     )
-    logger.info('Source vocab size {}'.format(len(source_vocab)))
+    logger.info(f'Source vocab size {len(source_vocab)}')
     target_vocab = seq2seq_util.gen_vocab(
         args.target_corpus,
         args.unk_threshold,
     )
     inversed_target_vocab = {v: k for (k, v) in target_vocab.items()}
-    logger.info('Target vocab size {}'.format(len(target_vocab)))
+    logger.info(f'Target vocab size {len(target_vocab)}')
 
     decoder = Seq2SeqModelCaffe2EnsembleDecoder(
         translate_params=dict(

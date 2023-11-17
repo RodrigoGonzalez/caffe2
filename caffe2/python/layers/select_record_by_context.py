@@ -38,9 +38,9 @@ class SelectRecordByContext(ModelLayer):
         self.output_schema = schema.NewRecord(model.net, ref_record)
 
     def _set_output_blobs(self, net, context):
-        assert context in self.input_record, (
-            "{} context is not in input record".format(context)
-        )
+        assert (
+            context in self.input_record
+        ), f"{context} context is not in input record"
         record = self.input_record[context]
 
         for in_blob, out_blob in zip(

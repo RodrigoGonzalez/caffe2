@@ -41,7 +41,7 @@ def AddMomentumParameterUpdate(train_model, LR):
     for param in params:
         param_grad = train_model.param_to_grad[param]
         param_momentum = train_model.param_init_net.ConstantFill(
-            [param], param + '_momentum', value=0.0
+            [param], f'{param}_momentum', value=0.0
         )
 
         # Update param_grad and param_momentum in place
@@ -87,7 +87,7 @@ def Create(args):
     def add_parameter_update_ops(model, lr_scale):
         model.AddWeightDecay(1e-4)
         ITER = model.Iter("ITER")
-        stepsz = int(30)
+        stepsz = 30
         LR = model.net.LearningRate(
             [ITER],
             "LR",

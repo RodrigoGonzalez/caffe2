@@ -17,11 +17,11 @@ import functools
 def primefac(n):
     ret = []
     divisor = 2
-    while divisor * divisor <= n:
+    while divisor**2 <= n:
         while (n % divisor) == 0:
             ret.append(divisor)
             n = n // divisor
-        divisor = divisor + 1
+        divisor += 1
     if n > 1:
         ret.append(n)
     return ret
@@ -32,8 +32,7 @@ class TestReBatchingQueue(TestCase):
         net = core.Net('net')
 
         tensors = [
-            net.ConstantFill([], 1, value=1.0, run_once=False)
-            for times in range(3)
+            net.ConstantFill([], 1, value=1.0, run_once=False) for _ in range(3)
         ]
 
         queue = net.CreateRebatchingQueue([], 1, capacity=10, num_blobs=1)
@@ -55,9 +54,7 @@ class TestReBatchingQueue(TestCase):
 
     def test_rebatching_queue_multi_enqueue_dequeue(self):
         net = core.Net('net')
-        workspace.FeedBlob(
-            "tensors", np.array([x for x in range(10)], np.int32)
-        )
+        workspace.FeedBlob("tensors", np.array(list(range(10)), np.int32))
 
         queue = net.CreateRebatchingQueue([], 1, capacity=10, num_blobs=1)
 
@@ -79,9 +76,7 @@ class TestReBatchingQueue(TestCase):
 
     def test_rebatching_queue_closes_properly(self):
         net = core.Net('net')
-        workspace.FeedBlob(
-            "tensors", np.array([x for x in range(10)], np.int32)
-        )
+        workspace.FeedBlob("tensors", np.array(list(range(10)), np.int32))
 
         queue = net.CreateRebatchingQueue([], 1, capacity=10, num_blobs=1)
 
@@ -129,22 +124,19 @@ class TestReBatchingQueue(TestCase):
 
         tensors = [
             net.GivenTensorIntFill(
-                [],
-                1,
-                shape=[NUM_ELEMENTS],
-                values=[x for x in range(NUM_ELEMENTS)]
+                [], 1, shape=[NUM_ELEMENTS], values=list(range(NUM_ELEMENTS))
             ),
             net.GivenTensorFill(
                 [],
                 1,
                 shape=[NUM_ELEMENTS],
-                values=[x * 1.0 for x in range(NUM_ELEMENTS)]
+                values=[x * 1.0 for x in range(NUM_ELEMENTS)],
             ),
             net.GivenTensorBoolFill(
                 [],
                 1,
                 shape=[NUM_ELEMENTS],
-                values=[(x % 2 == 0) for x in range(NUM_ELEMENTS)]
+                values=[(x % 2 == 0) for x in range(NUM_ELEMENTS)],
             ),
             'complex_tensor',
         ]

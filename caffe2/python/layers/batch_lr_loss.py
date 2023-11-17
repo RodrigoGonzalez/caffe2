@@ -33,8 +33,8 @@ class BatchLRLoss(ModelLayer):
         self.tags.update([Tags.EXCLUDE_FROM_PREDICTION])
 
         self.output_schema = schema.Scalar(
-            np.float32,
-            model.net.NextScopedBlob(name + '_output'))
+            np.float32, model.net.NextScopedBlob(f'{name}_output')
+        )
 
     # This should be a bit more complicated than it is right now
     def add_ops(self, net):
@@ -58,9 +58,7 @@ class BatchLRLoss(ModelLayer):
             weight_blob = self.input_record.weight()
             if self.input_record.weight.field_type().base != np.float32:
                 weight_blob = net.Cast(
-                    weight_blob,
-                    weight_blob + '_float32',
-                    to=core.DataType.FLOAT
+                    weight_blob, f'{weight_blob}_float32', to=core.DataType.FLOAT
                 )
             weight_blob = net.StopGradient(
                 [weight_blob],

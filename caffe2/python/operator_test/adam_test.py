@@ -86,7 +86,7 @@ class TestAdam(hu.HypothesisTestCase):
             hu.tensor(dtype=np.int64,
                       elements=st.sampled_from(np.arange(grad.shape[0]))),
         )
-        hypothesis.note('indices.shape: %s' % str(indices.shape))
+        hypothesis.note(f'indices.shape: {str(indices.shape)}')
 
         # For now, the indices must be unique
         hypothesis.assume(np.array_equal(np.unique(indices.flatten()),
@@ -107,7 +107,7 @@ class TestAdam(hu.HypothesisTestCase):
             mom2_out = np.copy(mom2)
             for i, index in enumerate(indices):
                 param_out[index], mom1_out[index], mom2_out[index] = \
-                    self.ref_adam(param[index], mom1[index], mom2[index],
+                        self.ref_adam(param[index], mom1[index], mom2[index],
                                   grad[i], LR, ITER,
                                   beta1, beta2, epsilon)
             return (param_out, mom1_out, mom2_out)

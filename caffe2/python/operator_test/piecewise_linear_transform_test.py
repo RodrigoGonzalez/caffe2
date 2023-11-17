@@ -28,8 +28,7 @@ class TestPiecewiseLinearTransform(hu.HypothesisTestCase):
             ),
             n - 1
         )
-        y = slopes[index] * x_ + intercepts[index]
-        return y
+        return slopes[index] * x_ + intercepts[index]
 
     @given(n=st.integers(1, 100), **hu.gcs_cpu_only)
     def test_multi_predictions_params_from_arg(self, n, gc, dc):

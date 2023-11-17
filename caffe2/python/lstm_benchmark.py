@@ -23,7 +23,7 @@ def generate_data(T, shape, num_labels):
     '''
     Fill a queue with input data
     '''
-    log.info("Generating T={} sequence batches".format(T))
+    log.info(f"Generating T={T} sequence batches")
 
     generate_input_init_net = core.Net('generate_input_init')
     queue = generate_input_init_net.CreateBlobsQueue(
@@ -42,7 +42,7 @@ def generate_data(T, shape, num_labels):
 
     for t in range(T):
         if (t % (max(10, T // 10)) == 0):
-            print("Generating data {}/{}".format(t, T))
+            print(f"Generating data {t}/{T}")
         # Randomize the seqlength
         random_shape = (
             [np.random.randint(1, shape[0])] + shape[1:]
@@ -75,8 +75,7 @@ def create_model(args, queue, label_queue, input_shape):
     init_blobs = []
     if args.implementation == "own":
         for i in range(args.num_layers):
-            init_blobs.append("hidden_init_{}".format(i))
-            init_blobs.append("cell_init_{}".format(i))
+            init_blobs.extend((f"hidden_init_{i}", f"cell_init_{i}"))
         model.net.AddExternalInputs(init_blobs)
 
         output, last_hidden, _, last_state = rnn_cell.LSTM(
@@ -161,10 +160,10 @@ def Caffe2LSTM(args):
     workspace.RunNet(model.net.Proto().name)
     num_iters = num_iters - 1
 
-    if (args.gpu):
+    if args.gpu:
         log.info("Memory stats:")
         stats = utils.GetGPUMemoryUsageStats()
-        log.info("GPU memory:\t{} MB".format(stats['max_total'] / 1024 / 1024))
+        log.info(f"GPU memory:\t{stats['max_total'] / 1024 / 1024} MB")
 
     log.info("------ Starting benchmark ------")
     start_time = time.time()
@@ -174,25 +173,22 @@ def Caffe2LSTM(args):
         workspace.RunNet(model.net.Proto().name, iters_once)
 
         new_time = time.time()
-        log.info("Iter: {} / {}. Entries Per Second: {}k.". format(
-            iteration,
-            num_iters,
-            entries_per_iter * iters_once / (new_time - last_time) // 1000,
-        ))
+        log.info(
+            f"Iter: {iteration} / {num_iters}. Entries Per Second: {entries_per_iter * iters_once / (new_time - last_time) // 1000}k."
+        )
         last_time = new_time
 
-    log.info("Done. Total EPS excluding 1st iteration: {}k".format(
-        total_iters * entries_per_iter / (time.time() - start_time) // 1000,
-    ))
+    log.info(
+        f"Done. Total EPS excluding 1st iteration: {total_iters * entries_per_iter / (time.time() - start_time) // 1000}k"
+    )
 
-    if (args.gpu):
+    if args.gpu:
         log.info("Memory stats:")
         stats = utils.GetGPUMemoryUsageStats()
-        log.info("GPU memory:\t{} MB".format(stats['max_total'] / 1024 / 1024))
+        log.info(f"GPU memory:\t{stats['max_total'] / 1024 / 1024} MB")
         if (stats['max_total'] != stats['total']):
             log.warning(
-                "Max usage differs from current total usage: {} > {}".
-                format(stats['max_total'], stats['total'])
+                f"Max usage differs from current total usage: {stats['max_total']} > {stats['total']}"
             )
             log.warning("This means that costly deallocations occured.")
 

@@ -62,10 +62,7 @@ class VideoInputOpTest(unittest.TestCase):
                     start_frame_tensor.data_type = 2
                     start_frame_tensor.int32_data.append(start_frame)
 
-                    txn.put(
-                        '{}'.format(index).encode('ascii'),
-                        tensor_protos.SerializeToString()
-                    )
+                    txn.put(f'{index}'.encode('ascii'), tensor_protos.SerializeToString())
                     index = index + 1
                     total_size = total_size + len(video_data) + sys.getsizeof(int)
 
@@ -77,7 +74,7 @@ class VideoInputOpTest(unittest.TestCase):
         if not os.path.exists(VIDEO):
             raise unittest.SkipTest('Missing data')
         temp_list = tempfile.NamedTemporaryFile(delete=False).name
-        line_str = '{} 0 {}\n'.format(VIDEO, random_label)
+        line_str = f'{VIDEO} 0 {random_label}\n'
         self.create_a_list(
             temp_list,
             line_str,

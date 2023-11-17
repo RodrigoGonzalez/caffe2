@@ -48,11 +48,10 @@ arg.name = "hierarchy"
 arg.s = hierarchy_proto.SerializeToString()
 
 beam = 5
-args_search = []
 arg_search = caffe2_pb2.Argument()
 arg_search.name = "tree"
 arg_search.s = tree.SerializeToString()
-args_search.append(arg_search)
+args_search = [arg_search]
 arg_search = caffe2_pb2.Argument()
 arg_search.name = "beam"
 arg_search.f = beam
@@ -149,9 +148,8 @@ class TestHsm(hu.HypothesisTestCase):
         dim_in = 5
         X = np.zeros((samples, dim_in)).astype(np.float32) + 1
         w = np.zeros((hierarchy_proto.size, dim_in)).astype(np.float32) + 1
-        b = np.array([i for i in range(hierarchy_proto.size)])\
-            .astype(np.float32)
-        labels = np.array([i for i in range(samples)]).astype(np.int32)
+        b = np.array(list(range(hierarchy_proto.size))).astype(np.float32)
+        labels = np.array(list(range(samples))).astype(np.int32)
 
         workspace.GlobalInit(['caffe2'])
         workspace.FeedBlob("data", X)
@@ -166,7 +164,8 @@ class TestHsm(hu.HypothesisTestCase):
             'HSoftmax',
             arg=[arg])
         grad_ops, g_input = core.GradientRegistry.GetGradientForOp(
-            op, [s + '_grad' for s in op.output])
+            op, [f'{s}_grad' for s in op.output]
+        )
 
         loss, _ = grad_checker.GetLossAndGrad(
             op, grad_ops, X, op.input[0], g_input[0], [0]
@@ -182,10 +181,11 @@ class TestHsm(hu.HypothesisTestCase):
         dim_in = 5
         X = np.random.rand(samples, dim_in).astype(np.float32) - 0.5
         w = np.random.rand(hierarchy_proto.size, dim_in) \
-            .astype(np.float32) - 0.5
+                .astype(np.float32) - 0.5
         b = np.random.rand(hierarchy_proto.size).astype(np.float32) - 0.5
-        labels = np.array([np.random.randint(0, 8) for i in range(samples)]) \
-            .astype(np.int32)
+        labels = np.array(
+            [np.random.randint(0, 8) for _ in range(samples)]
+        ).astype(np.int32)
 
         workspace.GlobalInit(['caffe2'])
         workspace.FeedBlob("data", X)
@@ -209,7 +209,7 @@ class TestHsm(hu.HypothesisTestCase):
         workspace.GlobalInit(['caffe2'])
         labelSet = list(range(0, 6))
         counts = [1, 2, 3, 4, 5, 6]
-        labels = sum([[l] * c for (l, c) in zip(labelSet, counts)], [])
+        labels = sum(([l] * c for (l, c) in zip(labelSet, counts)), [])
         Y = np.array(labels).astype(np.int64)
         workspace.FeedBlob("labels", Y)
         arg = caffe2_pb2.Argument()
@@ -236,9 +236,10 @@ class TestHsm(hu.HypothesisTestCase):
             self.assertEqual(len(path.path_nodes), len(code))
             self.assertEqual(len(path.path_nodes), len(code))
             for path_node, index, target in \
-                    zip(path.path_nodes, indices, code):
+                        zip(path.path_nodes, indices, code):
                 self.assertEqual(path_node.index, index)
                 self.assertEqual(path_node.target, target)
+
         checkPath(0, [0, 4, 6, 8], [1, 0, 0, 0])
         checkPath(1, [0, 4, 6, 8], [1, 0, 0, 1])
         checkPath(2, [0, 4, 6], [1, 0, 1])

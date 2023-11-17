@@ -70,14 +70,14 @@ def MLP(order, cudnn_ws):
     width = 3
     for i in range(depth):
         for j in range(width):
-            current = "fc_{}_{}".format(i, j) if i > 0 else "data"
-            next_ = "fc_{}_{}".format(i + 1, j)
+            current = f"fc_{i}_{j}" if i > 0 else "data"
+            next_ = f"fc_{i + 1}_{j}"
             model.FC(
                 current, next_,
                 dim_in=d, dim_out=d,
                 weight_init=model.XavierInit,
                 bias_init=model.XavierInit)
-    model.Sum(["fc_{}_{}".format(depth, j) for j in range(width)], ["sum"])
+    model.Sum([f"fc_{depth}_{j}" for j in range(width)], ["sum"])
     model.FC("sum", "last",
              dim_in=d, dim_out=1000,
              weight_init=model.XavierInit,
@@ -366,59 +366,74 @@ def _InceptionModule(
 ):
     # path 1: 1x1 conv
     conv1 = model.Conv(
-        input_blob, output_name + ":conv1", input_depth, conv1_depth, 1,
-        ('XavierFill', {}), ('ConstantFill', {})
+        input_blob,
+        f"{output_name}:conv1",
+        input_depth,
+        conv1_depth,
+        1,
+        ('XavierFill', {}),
+        ('ConstantFill', {}),
     )
     conv1 = model.Relu(conv1, conv1)
     # path 2: 1x1 conv + 3x3 conv
     conv3_reduce = model.Conv(
-        input_blob, output_name + ":conv3_reduce", input_depth, conv3_depths[0],
-        1, ('XavierFill', {}), ('ConstantFill', {})
+        input_blob,
+        f"{output_name}:conv3_reduce",
+        input_depth,
+        conv3_depths[0],
+        1,
+        ('XavierFill', {}),
+        ('ConstantFill', {}),
     )
     conv3_reduce = model.Relu(conv3_reduce, conv3_reduce)
     conv3 = model.Conv(
         conv3_reduce,
-        output_name + ":conv3",
+        f"{output_name}:conv3",
         conv3_depths[0],
         conv3_depths[1],
         3,
         ('XavierFill', {}),
         ('ConstantFill', {}),
-        pad=1
+        pad=1,
     )
     conv3 = model.Relu(conv3, conv3)
     # path 3: 1x1 conv + 5x5 conv
     conv5_reduce = model.Conv(
-        input_blob, output_name + ":conv5_reduce", input_depth, conv5_depths[0],
-        1, ('XavierFill', {}), ('ConstantFill', {})
+        input_blob,
+        f"{output_name}:conv5_reduce",
+        input_depth,
+        conv5_depths[0],
+        1,
+        ('XavierFill', {}),
+        ('ConstantFill', {}),
     )
     conv5_reduce = model.Relu(conv5_reduce, conv5_reduce)
     conv5 = model.Conv(
         conv5_reduce,
-        output_name + ":conv5",
+        f"{output_name}:conv5",
         conv5_depths[0],
         conv5_depths[1],
         5,
         ('XavierFill', {}),
         ('ConstantFill', {}),
-        pad=2
+        pad=2,
     )
     conv5 = model.Relu(conv5, conv5)
     # path 4: pool + 1x1 conv
     pool = model.MaxPool(
-        input_blob,
-        output_name + ":pool",
-        kernel=3,
-        stride=1,
-        pad=1
+        input_blob, f"{output_name}:pool", kernel=3, stride=1, pad=1
     )
     pool_proj = model.Conv(
-        pool, output_name + ":pool_proj", input_depth, pool_depth, 1,
-        ('XavierFill', {}), ('ConstantFill', {})
+        pool,
+        f"{output_name}:pool_proj",
+        input_depth,
+        pool_depth,
+        1,
+        ('XavierFill', {}),
+        ('ConstantFill', {}),
     )
     pool_proj = model.Relu(pool_proj, pool_proj)
-    output = model.Concat([conv1, conv3, conv5, pool_proj], output_name)
-    return output
+    return model.Concat([conv1, conv3, conv5, pool_proj], output_name)
 
 
 def Inception(order, cudnn_ws):
@@ -539,9 +554,9 @@ def Benchmark(model_gen, arg):
     )
 
     if arg.forward_only:
-        print('{}: running forward only.'.format(arg.model))
+        print(f'{arg.model}: running forward only.')
     else:
-        print('{}: running forward-backward.'.format(arg.model))
+        print(f'{arg.model}: running forward-backward.')
         model.AddGradientOperators(["loss"])
         AddParameterUpdate(model)
         if arg.order == 'NHWC':
@@ -647,10 +662,18 @@ if __name__ == '__main__':
         GetArgumentParser().print_help()
     else:
         workspace.GlobalInit(
-            ['caffe2', '--caffe2_log_level=0'] +
-            (['--caffe2_use_nvtx'] if args.use_nvtx else []) +
-            (['--caffe2_htrace_span_log_path=' + args.htrace_span_log_path]
-                if args.htrace_span_log_path else []))
+            (
+                ['caffe2', '--caffe2_log_level=0']
+                + (['--caffe2_use_nvtx'] if args.use_nvtx else [])
+                + (
+                    [
+                        f'--caffe2_htrace_span_log_path={args.htrace_span_log_path}'
+                    ]
+                    if args.htrace_span_log_path
+                    else []
+                )
+            )
+        )
 
         model_map = {
             'AlexNet': AlexNet,

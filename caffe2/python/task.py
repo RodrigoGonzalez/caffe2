@@ -99,8 +99,8 @@ class WorkspaceType(object):
 
 
 def get_setup_nets(key, steps_or_nets, target):
-    init_net = core.Net(key + '/init')
-    exit_net = core.Net(key + '/exit')
+    init_net = core.Net(f'{key}/init')
+    exit_net = core.Net(f'{key}/exit')
     init_nets = []
     exit_nets = []
     objs = []
@@ -123,7 +123,7 @@ def get_setup_nets(key, steps_or_nets, target):
             elif isinstance(nets, (core.Net, core.ExecutionStep)):
                 init_nets.append(nets)
             elif nets is not None:
-                raise TypeError('Unsupported type for setup: %s' % type(nets))
+                raise TypeError(f'Unsupported type for setup: {type(nets)}')
             obj._setup_used = True
         if hasattr(obj, 'exit'):
             nets = obj.exit(exit_net)
@@ -132,7 +132,7 @@ def get_setup_nets(key, steps_or_nets, target):
             elif isinstance(nets, (core.Net, core.ExecutionStep)):
                 exit_nets.append(nets)
             elif nets is not None:
-                raise TypeError('Unsupported type for setup: %s' % type(nets))
+                raise TypeError(f'Unsupported type for setup: {type(nets)}')
             obj._setup_used = True
 
     if len(init_net.Proto().op) > 0:
@@ -238,17 +238,16 @@ class TaskGroup(object):
         assert net is None or node not in self._report_nets
         if node not in self._report_nets:
             self._report_nets[node] = (
-                net if net else core.Net('%s/reporter' % node),
-                report_interval)
+                net if net else core.Net(f'{node}/reporter'),
+                report_interval,
+            )
         return self._report_nets[node][0]
 
     def tasks_by_node(self, node_remap=None):
-        # tasks_by_node can't be called twice because the setup won't
-        # work properly a second time.
-        node_map = {}
-        for task in self.tasks():
-            node_map[task.node] =\
-                node_remap(task.node) if node_remap else task.node
+        node_map = {
+            task.node: node_remap(task.node) if node_remap else task.node
+            for task in self.tasks()
+        }
         if self._tasks_by_node is not None:
             tasks_by_node, prev_node_map = self._tasks_by_node
             assert prev_node_map == node_map, (
@@ -292,17 +291,14 @@ class TaskGroup(object):
             if len(steps) == 1:
                 step = steps[0]
             else:
-                step = core.execution_step(
-                    '%s:body' % node, steps, concurrent_substeps=True)
+                step = core.execution_step(f'{node}:body', steps, concurrent_substeps=True)
             if len(node_inits) > 0 or len(node_exits) > 0:
                 steps = []
                 if len(node_inits) > 0:
-                    steps.append(
-                        core.execution_step('%s:init' % node, node_inits))
+                    steps.append(core.execution_step(f'{node}:init', node_inits))
                 steps.append(step)
                 if len(node_exits) > 0:
-                    steps.append(
-                        core.execution_step('%s:exit' % node, node_exits))
+                    steps.append(core.execution_step(f'{node}:exit', node_exits))
                 step = core.execution_step(node, steps)
             Task(
                 node=node, step=step, outputs=outputs,
@@ -314,9 +310,7 @@ class TaskGroup(object):
     def to_task(self, node=None):
         node = str(Node.current(node))
         tasks = self.tasks_by_node(lambda x: node).tasks()
-        if len(tasks) == 0:
-            return Task()
-        return tasks[0]
+        return Task() if len(tasks) == 0 else tasks[0]
 
 
 class TaskOutput(object):
@@ -414,11 +408,12 @@ class Task(object):
 
     @staticmethod
     def _get_next_name(node, group, name):
-        basename = str(node) + '/' + str(name)
+        basename = f'{str(node)}/{str(name)}'
         names_used = (
             Task._global_names_used
-            if group is None else
-            set(t.name for t in group._tasks_to_add))
+            if group is None
+            else {t.name for t in group._tasks_to_add}
+        )
         cur_name = basename
         i = 0
         while cur_name in names_used:
@@ -518,7 +513,7 @@ class Task(object):
             init_nets, exit_nets = get_setup_nets(
                 Task.TASK_SETUP, [self._step] + report_steps, self)
             if len(self._outputs) == 0:
-                output_net = core.Net('%s:output' % self.name)
+                output_net = core.Net(f'{self.name}:output')
                 self.add_output(output_net.ConstantFill(
                     [], 1, dtype=core.DataType.INT32, value=0))
                 exit_nets.append(output_net)
@@ -528,10 +523,10 @@ class Task(object):
             self._step_with_setup = core.execution_step(
                 self.name,
                 [
-                    core.execution_step('%s:init' % self.name, init_nets),
+                    core.execution_step(f'{self.name}:init', init_nets),
                     body,
-                    core.execution_step('%s:exit' % self.name, exit_nets),
-                ]
+                    core.execution_step(f'{self.name}:exit', exit_nets),
+                ],
             )
         elif self._step_with_setup is None:
             self._step_with_setup = core.execution_step(self.name, [])

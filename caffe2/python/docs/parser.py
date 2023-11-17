@@ -60,16 +60,13 @@ class Parser(object):
                     index += 1
                     continue
 
-                match = re.search(regex, text)
-                if match:
+                if match := re.search(regex, text):
                     parsed_block.pop(index)
                     start = match.start(0)
                     end = match.end(0)
 
                     f = self.formatter.clone()
-                    merge = func(match, f)
-
-                    if merge:
+                    if merge := func(match, f):
                         merged = text[:start] + f.dump() + text[end:]
                         parsed_block.insert(index, (UNPARSED, merged))
                     else:

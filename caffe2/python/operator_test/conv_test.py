@@ -155,7 +155,7 @@ class TestConvolution(hu.HypothesisTestCase):
 
         # cuDNN v6+ supports dilated convolutions
         if (workspace.GetCuDNNVersion() < 6000):
-            assume("" == engine or 1 == dilation)
+            assume(engine == "" or dilation == 1)
         assume(engine != "MKLDNN" or use_bias is True)
 
         op = core.CreateOperator(
@@ -173,7 +173,7 @@ class TestConvolution(hu.HypothesisTestCase):
             batch_size, size, size, input_channels).astype(np.float32) - 0.5
         w = np.random.rand(
             output_channels, kernel, kernel, input_channels).astype(np.float32)\
-            - 0.5
+                - 0.5
         b = np.random.rand(output_channels).astype(np.float32) - 0.5
         if order == "NCHW":
             X = X.transpose((0, 3, 1, 2))
@@ -181,7 +181,7 @@ class TestConvolution(hu.HypothesisTestCase):
 
         inputs = [X, w, b] if use_bias else [X, w]
         # Error handling path.
-        if size + pad + pad < dkernel or size + pad + pad < dkernel:
+        if size + pad + pad < dkernel:
             with self.assertRaises(RuntimeError):
                 self.assertDeviceChecks(dc, op, inputs, [0])
             return
@@ -217,7 +217,7 @@ class TestConvolution(hu.HypothesisTestCase):
 
         inputs = [X, w, b] if use_bias else [X, w]
 
-        if size + pad + pad < dkernel or size + pad + pad < dkernel:
+        if size + pad + pad < dkernel:
             with self.assertRaises(RuntimeError):
                 self.assertDeviceChecks(dc, op, inputs, [0])
             return
@@ -300,7 +300,7 @@ class TestConvolution(hu.HypothesisTestCase):
 
         inputs = [X, w, b] if use_bias else [X, w]
 
-        if size + pad + pad < dkernel or size + pad + pad < dkernel:
+        if size + pad + pad < dkernel:
             with self.assertRaises(RuntimeError):
                 self.assertDeviceChecks(dc, op, inputs, [0])
             return
@@ -328,7 +328,7 @@ class TestConvolution(hu.HypothesisTestCase):
             batch_size, size, size, input_channels).astype(np.float32) - 0.5
         w = np.random.rand(
             output_channels, kernel, kernel, input_channels).astype(np.float32)\
-            - 0.5
+                - 0.5
         b = np.random.rand(output_channels).astype(np.float32) - 0.5
         Output = collections.namedtuple("Output", ["Y", "engine", "order"])
         outputs = []
@@ -339,8 +339,8 @@ class TestConvolution(hu.HypothesisTestCase):
             dilated_conv_nchw = (dilated_conv and order == "NCHW")
             # cuDNN v6+ supports dilated convolutions only for NCHW
             engine_list = ["", "CUDNN"] \
-                if (not dilated_conv) or (cudnn_v6p and dilated_conv_nchw) \
-                else [""]
+                    if (not dilated_conv) or (cudnn_v6p and dilated_conv_nchw) \
+                    else [""]
             for engine in engine_list:
                 op = core.CreateOperator(
                     "Conv",
@@ -373,10 +373,7 @@ class TestConvolution(hu.HypothesisTestCase):
                     Y=self.ws.blobs["Y"].fetch(), engine=engine, order=order))
 
         def canonical(o):
-            if o.order == "NHWC":
-                return o.Y.transpose((0, 3, 1, 2))
-            else:
-                return o.Y
+            return o.Y.transpose((0, 3, 1, 2)) if o.order == "NHWC" else o.Y
 
         for o in outputs:
             np.testing.assert_allclose(

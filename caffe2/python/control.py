@@ -27,7 +27,7 @@ _used_step_names = set()
 
 def _get_next_step_name(control_name, base_name):
     global _current_idx, _used_step_names
-    concat_name = '%s/%s' % (base_name, control_name)
+    concat_name = f'{base_name}/{control_name}'
     next_name = concat_name
     while next_name in _used_step_names:
         next_name = '%s_%d' % (concat_name, _current_idx)
@@ -85,9 +85,9 @@ def GetConditionBlobFromNet(condition_net):
     The condition blob is the last external_output that must
     be a single bool
     """
-    assert len(condition_net.Proto().external_output) > 0, (
-        "Condition net %s must has at least one external output" %
-        condition_net.Proto.name)
+    assert (
+        len(condition_net.Proto().external_output) > 0
+    ), f"Condition net {condition_net.Proto.name} must has at least one external output"
     # we need to use a blob reference here instead of a string
     # otherwise, it will add another name_scope to the input later
     # when we create new ops (such as OR of two inputs)
@@ -317,8 +317,7 @@ def _RunOnceIf(name, condition_blob_or_net, nets_or_steps):
 
     if _IsNets(nets_or_steps):
         bool_net = BoolNet((stop_blob, False))
-        return Do(name + '/_RunOnceIf',
-                  bool_net, if_step('_RunOnceIf-inner'))
+        return Do(f'{name}/_RunOnceIf', bool_net, if_step('_RunOnceIf-inner'))
     else:
         return if_step('_RunOnceIf')
 
@@ -364,9 +363,7 @@ def For(name, nets_or_steps, iter_num):
         _get_next_step_name('For-inner', name),
         _PrependNets(nets_or_steps, iter_net),
         should_stop_blob=iter_done)
-    return Do(name + '/For',
-              Do(name + '/For-init-net', init_net),
-              for_step)
+    return Do(f'{name}/For', Do(f'{name}/For-init-net', init_net), for_step)
 
 
 def While(name, condition_blob_or_net, nets_or_steps):
@@ -404,7 +401,7 @@ def While(name, condition_blob_or_net, nets_or_steps):
         # condition_blob_or_net. So we use BootNet to set stop_blob to
         # False.
         bool_net = BoolNet((stop_blob, False))
-        return Do(name + '/While', bool_net, while_step('While-inner'))
+        return Do(f'{name}/While', bool_net, while_step('While-inner'))
     else:
         return while_step('While')
 
@@ -452,11 +449,15 @@ def DoWhile(name, condition_blob_or_net, nets_or_steps):
     # in nets_or_steps. This is not what we want. So we use BootNet to
     # set stop_blob to False.
     bool_net = BoolNet((stop_blob, False))
-    return Do(name + '/DoWhile', bool_net, core.scoped_execution_step(
-        _get_next_step_name('DoWhile-inner', name),
-        nets_or_steps,
-        should_stop_blob=stop_blob,
-    ))
+    return Do(
+        f'{name}/DoWhile',
+        bool_net,
+        core.scoped_execution_step(
+            _get_next_step_name('DoWhile-inner', name),
+            nets_or_steps,
+            should_stop_blob=stop_blob,
+        ),
+    )
 
 
 def DoUntil(name, condition_blob_or_net, nets_or_steps):
@@ -485,11 +486,15 @@ def DoUntil(name, condition_blob_or_net, nets_or_steps):
     # in nets_or_steps. This is not what we want. So we use BootNet to
     # set stop_blob to False.
     bool_net = BoolNet((stop_blob, False))
-    return Do(name + '/DoUntil', bool_net, core.scoped_execution_step(
-        _get_next_step_name('DoUntil-inner', name),
-        nets_or_steps,
-        should_stop_blob=stop_blob,
-    ))
+    return Do(
+        f'{name}/DoUntil',
+        bool_net,
+        core.scoped_execution_step(
+            _get_next_step_name('DoUntil-inner', name),
+            nets_or_steps,
+            should_stop_blob=stop_blob,
+        ),
+    )
 
 
 def Switch(name, *conditions):
@@ -509,7 +514,11 @@ def Switch(name, *conditions):
     conditions = _MakeList(conditions)
     return core.scoped_execution_step(
         _get_next_step_name('Switch', name),
-        [_RunOnceIf(name + '/Switch', cond, step) for cond, step in conditions])
+        [
+            _RunOnceIf(f'{name}/Switch', cond, step)
+            for cond, step in conditions
+        ],
+    )
 
 
 def SwitchNot(name, *conditions):
@@ -519,8 +528,11 @@ def SwitchNot(name, *conditions):
     conditions = _MakeList(conditions)
     return core.scoped_execution_step(
         _get_next_step_name('SwitchNot', name),
-        [_RunOnceIfNot(name + '/SwitchNot', cond, step)
-         for cond, step in conditions])
+        [
+            _RunOnceIfNot(f'{name}/SwitchNot', cond, step)
+            for cond, step in conditions
+        ],
+    )
 
 
 def If(name, condition_blob_or_net,
@@ -535,8 +547,7 @@ def If(name, condition_blob_or_net,
     true/false_nets_or_steps so as to get the condition.
     """
     if not false_nets_or_steps:
-        return _RunOnceIf(name + '/If',
-                          condition_blob_or_net, true_nets_or_steps)
+        return _RunOnceIf(f'{name}/If', condition_blob_or_net, true_nets_or_steps)
 
     if isinstance(condition_blob_or_net, core.Net):
         condition_blob = GetConditionBlobFromNet(condition_blob_or_net)
@@ -544,10 +555,11 @@ def If(name, condition_blob_or_net,
         condition_blob = condition_blob_or_net
 
     return Do(
-        name + '/If',
-        _RunOnceIf(name + '/If-true',
-                   condition_blob_or_net, true_nets_or_steps),
-        _RunOnceIfNot(name + '/If-false', condition_blob, false_nets_or_steps)
+        f'{name}/If',
+        _RunOnceIf(
+            f'{name}/If-true', condition_blob_or_net, true_nets_or_steps
+        ),
+        _RunOnceIfNot(f'{name}/If-false', condition_blob, false_nets_or_steps),
     )
 
 
@@ -558,8 +570,9 @@ def IfNot(name, condition_blob_or_net,
     otherwise executes false_nets_or_steps
     """
     if not false_nets_or_steps:
-        return _RunOnceIfNot(name + '/IfNot',
-                             condition_blob_or_net, true_nets_or_steps)
+        return _RunOnceIfNot(
+            f'{name}/IfNot', condition_blob_or_net, true_nets_or_steps
+        )
 
     if isinstance(condition_blob_or_net, core.Net):
         condition_blob = GetConditionBlobFromNet(condition_blob_or_net)
@@ -567,8 +580,9 @@ def IfNot(name, condition_blob_or_net,
         condition_blob = condition_blob_or_net
 
     return Do(
-        name + '/IfNot',
-        _RunOnceIfNot(name + '/IfNot-true',
-                      condition_blob_or_net, true_nets_or_steps),
-        _RunOnceIf(name + '/IfNot-false', condition_blob, false_nets_or_steps)
+        f'{name}/IfNot',
+        _RunOnceIfNot(
+            f'{name}/IfNot-true', condition_blob_or_net, true_nets_or_steps
+        ),
+        _RunOnceIf(f'{name}/IfNot-false', condition_blob, false_nets_or_steps),
     )

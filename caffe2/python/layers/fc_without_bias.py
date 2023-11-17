@@ -31,13 +31,13 @@ class FCWithoutBias(SamplingTrainableMixin, ModelLayer):
         )
 
         input_dims = input_record.field_types()[0].shape[0]
-        assert input_dims > 0, (
-            "FCWithoutBias expects input dimensions > 0, got {}".format(input_dims)
-        )
+        assert (
+            input_dims > 0
+        ), f"FCWithoutBias expects input dimensions > 0, got {input_dims}"
 
         self.output_schema = schema.Scalar(
-            (np.float32, (output_dims, )),
-            model.net.NextScopedBlob(name + '_output')
+            (np.float32, (output_dims,)),
+            model.net.NextScopedBlob(f'{name}_output'),
         )
 
         scale = math.sqrt(1.0 / input_dims)
@@ -46,7 +46,7 @@ class FCWithoutBias(SamplingTrainableMixin, ModelLayer):
                             'max': scale}
         )
 
-        self.w = model.net.NextScopedBlob(name + "_w")
+        self.w = model.net.NextScopedBlob(f"{name}_w")
 
         self.params.append(
             LayerParameter(

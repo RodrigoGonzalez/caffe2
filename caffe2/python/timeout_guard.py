@@ -63,7 +63,7 @@ class WatcherThread(threading.Thread):
                         for filename, lineno, name, line in traceback.extract_stack(stack):
                             code.append('File: "%s", line %d, in %s' % (filename, lineno, name))
                             if line:
-                                code.append("  %s" % (line.strip()))
+                                code.append(f"  {line.strip()}")
 
                 print("\n".join(code))
                 log.error("Process did not terminate cleanly in 10 s, forcing")
@@ -82,7 +82,7 @@ class WatcherThread(threading.Thread):
                 for filename, lineno, name, line in traceback.extract_stack(stack):
                     code.append('File: "%s", line %d, in %s' % (filename, lineno, name))
                     if line:
-                        code.append("  %s" % (line.strip()))
+                        code.append(f"  {line.strip()}")
 
             print("\n".join(code))
             os.kill(os.getpid(), signal.SIGINT)

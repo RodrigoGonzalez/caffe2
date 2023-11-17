@@ -61,16 +61,16 @@ class GatherRecord(ModelLayer):
             # is implemented
             lengths_float = net.Cast(
                 record.lengths(),
-                net.NextScopedBlob(str(record.lengths()) + '_float'),
+                net.NextScopedBlob(f'{str(record.lengths())}_float'),
                 to=core.DataType.FLOAT,
             )
             lengths_blob_float = net.LengthsSum(
                 [lengths_float, lengths_blob],
-                net.NextScopedBlob(str(record.lengths()) + "_nested_float")
+                net.NextScopedBlob(f"{str(record.lengths())}_nested_float"),
             )
             lengths_blob = net.Cast(
                 lengths_blob_float,
-                net.NextScopedBlob(str(record.lengths()) + "_nested"),
+                net.NextScopedBlob(f"{str(record.lengths())}_nested"),
                 to=core.DataType.INT32,
             )
         self._dispatch(net, record._items, lengths_blob, output_record._items)

@@ -40,8 +40,7 @@ def verify_apply_bounding_box(img, box):
     if any(el < 0 for el in list(y_bounds) + list(x_bounds) + list(c_bounds)):
         return img
 
-    bboxed = skimage.util.crop(img, (y_bounds, x_bounds, c_bounds))
-    return bboxed
+    return skimage.util.crop(img, (y_bounds, x_bounds, c_bounds))
 
 
 # This function is called but not used. It will trip on assert False if
@@ -72,14 +71,8 @@ def verify_crop(img, crop):
     import skimage.util
     assert img.shape[0] >= crop
     assert img.shape[1] >= crop
-    y_offset = 0
-    if img.shape[0] > crop:
-        y_offset = (img.shape[0] - crop) // 2
-
-    x_offset = 0
-    if img.shape[1] > crop:
-        x_offset = (img.shape[1] - crop) // 2
-
+    y_offset = (img.shape[0] - crop) // 2 if img.shape[0] > crop else 0
+    x_offset = (img.shape[1] - crop) // 2 if img.shape[1] > crop else 0
     y_bounds = (y_offset, img.shape[0] - crop - y_offset)
     x_bounds = (x_offset, img.shape[1] - crop - x_offset)
     c_bounds = (0, 0)
@@ -140,12 +133,14 @@ def create_test(output_dir, width, height, default_bound,
             if index % 2 == 0:
                 if height > minsize and width > minsize:
                     do_default_bound = False
-                    bounding_box[0:2] = [np.random.randint(a) for a in
-                                         (height - minsize, width - minsize)]
+                    bounding_box[:2] = [
+                        np.random.randint(a)
+                        for a in (height - minsize, width - minsize)
+                    ]
                     bounding_box[2:4] = [np.random.randint(a) + minsize for a in
                                          (height - bounding_box[0] - minsize + 1,
                                           width - bounding_box[1] - minsize + 1)]
-                    # print("Bounding box is %s" % (str(bounding_box)))
+                                    # print("Bounding box is %s" % (str(bounding_box)))
             # Create expected result
             img_expected = img_array.astype(np.float32) * (1.0 / 255.0)
             # print("Orig image: %s" % (str(caffe2_img(img_expected))))
@@ -179,12 +174,9 @@ def create_test(output_dir, width, height, default_bound,
                 bounding_tensor.data_type = 2  # int32 data
                 bounding_tensor.int32_data.extend(bounding_box)
 
-            txn.put(
-                '{}'.format(index).encode('ascii'),
-                tensor_protos.SerializeToString()
-            )
-            index = index + 1
-        # End while
+            txn.put(f'{index}'.encode('ascii'), tensor_protos.SerializeToString())
+            index += 1
+            # End while
     # End with
     return expected_results
 

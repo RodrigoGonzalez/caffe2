@@ -41,7 +41,7 @@ FIELD_SEPARATOR = ':'
 
 def _join_field_name(prefix, suffix):
     if prefix and suffix:
-        return '{}{}{}'.format(prefix, FIELD_SEPARATOR, suffix)
+        return f'{prefix}{FIELD_SEPARATOR}{suffix}'
     elif prefix:
         return prefix
     elif suffix:
@@ -239,20 +239,20 @@ class List(Field):
             raise AttributeError(item)
         if isinstance(self._items, Struct):
             return getattr(self._items, item)
-        elif item == 'value' or item == 'items':
+        elif item in ['value', 'items']:
             return self._items
         else:
-            raise AttributeError('Field not found in list: %s.' % item)
+            raise AttributeError(f'Field not found in list: {item}.')
 
     def __getitem__(self, item):
         if isinstance(self._items, Struct):
             return self._items[item]
         elif item == 'lengths':
             return self.lengths
-        elif item == 'value' or item == 'items':
+        elif item in ['value', 'items']:
             return self._items
         else:
-            raise KeyError('Field not found in list: %s.' % item)
+            raise KeyError(f'Field not found in list: {item}.')
 
 
 class Struct(Field):
@@ -303,7 +303,7 @@ class Struct(Field):
                     not isinstance(field, Struct) or
                     not isinstance(self.fields[name], Struct)
             ):
-                raise ValueError('Duplicate field name: %s' % name)
+                raise ValueError(f'Duplicate field name: {name}')
             self.fields[name] = self.fields[name] + field
         for id, (_, field) in enumerate(self.fields.items()):
             field._set_parent(self, id)
@@ -313,10 +313,7 @@ class Struct(Field):
     def _struct_from_nested_name(self, nested_name, field):
         def create_internal(nested_name, field):
             names = nested_name.split(FIELD_SEPARATOR, 1)
-            if len(names) == 1:
-                added_field = field
-            else:
-                added_field = create_internal(names[1], field)
+            added_field = field if len(names) == 1 else create_internal(names[1], field)
             return Struct((names[0], added_field))
 
         names = nested_name.split(FIELD_SEPARATOR, 1)
@@ -401,7 +398,7 @@ class Struct(Field):
         "a:b:c". Int item is the index of a field at the first level of the
         Struct.
         """
-        if isinstance(item, list) or isinstance(item, tuple):
+        if isinstance(item, (list, tuple)):
             return Struct(
                 * [
                     (
@@ -415,7 +412,7 @@ class Struct(Field):
         else:
             field = self._get_field_by_nested_name(item)
             if field is None:
-                raise KeyError('field "%s" not found' % (item))
+                raise KeyError(f'field "{item}" not found')
             return field
 
     def __getattr__(self, item):
@@ -570,8 +567,9 @@ class Scalar(Field):
         return self._metadata
 
     def set_metadata(self, value):
-        assert isinstance(value, Metadata), \
-            'metadata must be Metadata, got {}'.format(type(value))
+        assert isinstance(
+            value, Metadata
+        ), f'metadata must be Metadata, got {type(value)}'
         self._metadata = value
         self._validate_metadata()
 
@@ -580,16 +578,17 @@ class Scalar(Field):
             return
         if (self._metadata.categorical_limit is not None and
                 self.dtype is not None):
-            assert np.issubdtype(self.dtype, np.integer), \
-                "`categorical_limit` can be specified only in integral " + \
-                "fields but got {}".format(self.dtype)
+            assert np.issubdtype(
+                self.dtype, np.integer
+            ), f"`categorical_limit` can be specified only in integral fields but got {self.dtype}"
 
     def set_value(self, blob, throw_on_type_mismatch=False, unsafe=False):
         """Sets only the blob field still validating the existing dtype"""
         if self.dtype.base != np.void and throw_on_type_mismatch:
             assert isinstance(blob, np.ndarray), "Got {!r}".format(blob)
-            assert blob.dtype.base == self.dtype.base, (
-                "Expected {}, got {}".format(self.dtype.base, blob.dtype.base))
+            assert (
+                blob.dtype.base == self.dtype.base
+            ), f"Expected {self.dtype.base}, got {blob.dtype.base}"
         self.set(dtype=self._original_dtype, blob=blob, unsafe=unsafe)
 
     def set(self, dtype=None, blob=None, metadata=None, unsafe=False):
@@ -633,8 +632,7 @@ class Scalar(Field):
                 if blob.size == 0 and not preserve_shape:
                     blob = blob.reshape((0, ) + dtype.shape)
             else:
-                assert isinstance(blob, np.ndarray), (
-                    'Invalid blob type: %s' % str(type(blob)))
+                assert isinstance(blob, np.ndarray), f'Invalid blob type: {str(type(blob))}'
 
             # reshape scalars into 1D arrays
             # TODO(azzolini): figure out better way of representing this
@@ -661,10 +659,7 @@ class Scalar(Field):
 
     def set_type(self, dtype):
         self._original_dtype = dtype
-        if dtype is not None:
-            self.dtype = np.dtype(dtype)
-        else:
-            self.dtype = np.dtype(np.void)
+        self.dtype = np.dtype(dtype) if dtype is not None else np.dtype(np.void)
         self._validate_metadata()
 
     def __repr__(self):
@@ -772,10 +767,7 @@ class _SchemaNode(object):
             assert self.field is not None
             return self.field
 
-        child_names = []
-        for child in self.children:
-            child_names.append(child.name)
-
+        child_names = [child.name for child in self.children]
         if (set(child_names) == set(list_names)):
             for child in self.children:
                 if child.name == 'values':
@@ -787,7 +779,6 @@ class _SchemaNode(object):
                 lengths_blob=lengths_field
             )
             self.type_str = "List"
-            return self.field
         elif (set(child_names) == set(map_names)):
             for child in self.children:
                 if child.name == 'keys':
@@ -802,16 +793,12 @@ class _SchemaNode(object):
                 lengths_blob=lengths_field
             )
             self.type_str = "Map"
-            return self.field
-
         else:
-            struct_fields = []
-            for child in self.children:
-                struct_fields.append((child.name, child.get_field()))
-
+            struct_fields = [(child.name, child.get_field()) for child in self.children]
             self.field = Struct(*struct_fields)
             self.type_str = "Struct"
-            return self.field
+
+        return self.field
 
     def print_recursively(self):
         for child in self.children:
@@ -889,7 +876,7 @@ def from_blob_list(schema, values, throw_on_type_mismatch=False):
 def as_record(value):
     if isinstance(value, Field):
         return value
-    elif isinstance(value, list) or isinstance(value, tuple):
+    elif isinstance(value, (list, tuple)):
         is_field_list = all(
             f is tuple and len(f) == 2 and isinstance(f[0], basestring)
             for f in value
@@ -911,10 +898,7 @@ def FetchRecord(blob_record, ws=None, throw_on_type_mismatch=False):
     """
 
     def fetch(v):
-        if ws is None:
-            return workspace.FetchBlob(str(v))
-        else:
-            return ws.blobs[str(v)].fetch()
+        return workspace.FetchBlob(str(v)) if ws is None else ws.blobs[str(v)].fetch()
 
     assert isinstance(blob_record, Field)
     field_blobs = blob_record.field_blobs()
@@ -1048,11 +1032,10 @@ def equal_schemas(schema,
     if check_field_types and (
             schema.field_types() != original_schema.field_types()):
         return False
-    if check_field_metas and (
-            schema.field_metadata() != original_schema.field_metadata()):
-        return False
-
-    return True
+    return (
+        not check_field_metas
+        or schema.field_metadata() == original_schema.field_metadata()
+    )
 
 
 def schema_check(schema, previous=None):
@@ -1066,7 +1049,7 @@ def data_type_for_dtype(dtype):
     for np_type, dt in _DATA_TYPE_FOR_DTYPE:
         if dtype.base == np_type:
             return dt
-    raise TypeError('Unknown dtype: ' + str(dtype.base))
+    raise TypeError(f'Unknown dtype: {str(dtype.base)}')
 
 
 def attach_metadata_to_scalars(field, metadata):

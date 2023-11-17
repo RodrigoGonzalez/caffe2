@@ -42,8 +42,7 @@ class TestUnmaskOp(hu.HypothesisTestCase):
             value_name = "value%d" % i
             workspace.FeedBlob(mask_name, mask)
             workspace.FeedBlob(value_name, values)
-            masks_and_values_name.append(mask_name)
-            masks_and_values_name.append(value_name)
+            masks_and_values_name.extend((mask_name, value_name))
         net = core.Net('net')
         net.BooleanUnmask(masks_and_values_name, ["output"])
         workspace.RunNetOnce(net)

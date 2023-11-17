@@ -23,8 +23,9 @@ def get_categorical_limit(record):
         key = 'keys'
     else:
         raise NotImplementedError()
-    assert record[key].metadata is not None, (
-        "Blob {} doesn't have metadata".format(str(record[key]())))
+    assert (
+        record[key].metadata is not None
+    ), f"Blob {str(record[key]())} doesn't have metadata"
     return record[key].metadata.categorical_limit
 
 
@@ -116,11 +117,16 @@ class LayerParameter(object):
 def is_request_only_scalar(scalar):
     if len(scalar.field_metadata()) == 0:
         return False
-    for metadata in scalar.field_metadata():
-        if not (metadata and metadata.feature_specs and getattr(
-                metadata.feature_specs, 'feature_is_request_only', False)):
-            return False
-    return True
+    return all(
+        (
+            metadata
+            and metadata.feature_specs
+            and getattr(
+                metadata.feature_specs, 'feature_is_request_only', False
+            )
+        )
+        for metadata in scalar.field_metadata()
+    )
 
 
 class ModelLayer(object):

@@ -30,8 +30,8 @@ class BatchMSELoss(ModelLayer):
         self.tags.update([Tags.EXCLUDE_FROM_PREDICTION])
 
         self.output_schema = schema.Scalar(
-            np.float32,
-            model.net.NextScopedBlob(name + '_output'))
+            np.float32, model.net.NextScopedBlob(f'{name}_output')
+        )
 
     def add_ops(self, net):
         prediction = net.Squeeze(

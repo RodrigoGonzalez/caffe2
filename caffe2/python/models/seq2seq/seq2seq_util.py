@@ -92,7 +92,7 @@ def rnn_unidirectional_encoder(
         initial_states=(initial_hidden_state, initial_cell_state),
         dim_in=embedding_size,
         dim_out=encoder_num_units,
-        scope=(scope + '/' if scope else '') + 'encoder',
+        scope=(f'{scope}/' if scope else '') + 'encoder',
         outputs_with_grads=([0] if use_attention else [1, 3]),
     )
     return outputs, final_hidden_state, final_cell_state
@@ -124,7 +124,7 @@ def rnn_bidirectional_encoder(
         initial_states=(initial_hidden_state, initial_cell_state),
         dim_in=embedding_size,
         dim_out=encoder_num_units,
-        scope=(scope + '/' if scope else '') + 'forward_encoder',
+        scope=(f'{scope}/' if scope else '') + 'forward_encoder',
         outputs_with_grads=([0] if use_attention else [1, 3]),
     )
 
@@ -146,7 +146,7 @@ def rnn_bidirectional_encoder(
         initial_states=(initial_hidden_state, initial_cell_state),
         dim_in=embedding_size,
         dim_out=encoder_num_units,
-        scope=(scope + '/' if scope else '') + 'backward_encoder',
+        scope=(f'{scope}/' if scope else '') + 'backward_encoder',
         outputs_with_grads=([0] if use_attention else [1, 3]),
     )
 
@@ -342,7 +342,7 @@ def output_projection(
         output_projection_w,
         output_projection_b,
     ])
-    output_logits = model.net.FC(
+    return model.net.FC(
         [
             decoder_outputs,
             output_projection_w,
@@ -350,4 +350,3 @@ def output_projection(
         ],
         ['output_logits'],
     )
-    return output_logits

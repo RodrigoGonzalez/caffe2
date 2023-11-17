@@ -46,15 +46,13 @@ def init_tt_cores(inp_sizes, out_sizes, tt_ranks, seed=1234):
     np.random.seed(seed)
 
     # Assert that the sizes of each input is correct
-    assert(len(inp_sizes) == len(out_sizes)), \
-           "The number of input dimensions (" + str(len(inp_sizes)) + \
-           ") must be equal to the number of output dimensions (" + \
-           str(len(out_sizes)) + ")."
+    assert len(inp_sizes) == len(
+        out_sizes
+    ), f"The number of input dimensions ({len(inp_sizes)}) must be equal to the number of output dimensions ({len(out_sizes)})."
 
-    assert(len(tt_ranks) == len(inp_sizes) + 1), \
-           "The number of tt-ranks (" + str(len(tt_ranks)) + ") must be " + \
-           "one more than the number of input and output dims (" + \
-           str(len(out_sizes)) + ")."
+    assert (
+        len(tt_ranks) == len(inp_sizes) + 1
+    ), f"The number of tt-ranks ({len(tt_ranks)}) must be one more than the number of input and output dims ({len(out_sizes)})."
 
     # Convert to numpy arrays
     inp_sizes = np.array(inp_sizes)
@@ -131,23 +129,21 @@ def matrix_to_tt(W, inp_sizes, out_sizes, tt_ranks):
    """
 
     # Assert that the sizes of each input is correct
-    assert(len(inp_sizes) == len(out_sizes)), \
-           "The number of input dimensions (" + str(len(inp_sizes)) + \
-           ") must be equal to the number of output dimensions (" + \
-           str(len(out_sizes)) + ")."
+    assert len(inp_sizes) == len(
+        out_sizes
+    ), f"The number of input dimensions ({len(inp_sizes)}) must be equal to the number of output dimensions ({len(out_sizes)})."
 
-    assert(len(tt_ranks) == len(inp_sizes) + 1), \
-           "The number of tt-ranks (" + str(len(tt_ranks)) + ") must be " + \
-           "one more than the number of input and output dimensions (" + \
-           str(len(out_sizes)) + ")."
+    assert (
+        len(tt_ranks) == len(inp_sizes) + 1
+    ), f"The number of tt-ranks ({len(tt_ranks)}) must be one more than the number of input and output dimensions ({len(out_sizes)})."
 
-    assert(W.shape[0] == np.prod(inp_sizes)), \
-           "The product of the input sizes (" + str(np.prod(inp_sizes)) + \
-           ") must be equal to first dimension of W (" + str(W.shape[0]) + ")."
+    assert W.shape[0] == np.prod(
+        inp_sizes
+    ), f"The product of the input sizes ({str(np.prod(inp_sizes))}) must be equal to first dimension of W ({str(W.shape[0])})."
 
-    assert(W.shape[1] == np.prod(out_sizes)), \
-           "The product of the output sizes (" + str(np.prod(out_sizes)) + \
-           ") must be equal to second dimension of W (" + str(W.shape[1]) + ")."
+    assert W.shape[1] == np.prod(
+        out_sizes
+    ), f"The product of the output sizes ({str(np.prod(out_sizes))}) must be equal to second dimension of W ({str(W.shape[1])})."
 
     # W is transposed so that the multiplication X * W^T can be computed, just
     # as it is in the FC layer.
@@ -223,7 +219,7 @@ def tt_svd(W, sizes, tt_ranks):
         C = np.reshape(C, [shape, -1])
         U, S, V = np.linalg.svd(C, full_matrices=False)
         U = U[:, 0:tt_ranks[i + 1]]
-        S = S[0:tt_ranks[i + 1]]
+        S = S[:tt_ranks[i + 1]]
         V = V[0:tt_ranks[i + 1], :]
 
         core[pos:pos + tt_ranks[i] * sizes[i] * tt_ranks[i + 1]] = U.ravel()

@@ -27,10 +27,10 @@ class LastNWindowCollector(ModelLayer):
         assert num_to_collect > 0
         self.num_to_collect = num_to_collect
         assert isinstance(input_record, schema.Scalar), \
-            "Got {!r}".format(input_record)
+                "Got {!r}".format(input_record)
 
-        self.last_n = model.net.NextScopedBlob(self.name + "_last_n")
-        self.next_blob = model.net.NextScopedBlob(self.name + "_next")
+        self.last_n = model.net.NextScopedBlob(f"{self.name}_last_n")
+        self.next_blob = model.net.NextScopedBlob(f"{self.name}_next")
 
         self.params.append(LayerParameter(
             parameter=self.last_n,
@@ -53,7 +53,8 @@ class LastNWindowCollector(ModelLayer):
         ))
 
         self.output_schema = schema.from_blob_list(
-            input_record, [model.net.NextScopedBlob(name + "_output")])
+            input_record, [model.net.NextScopedBlob(f"{name}_output")]
+        )
 
     def add_ops(self, net):
         net.LastNWindowCollector(

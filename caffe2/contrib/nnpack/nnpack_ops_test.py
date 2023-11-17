@@ -141,7 +141,7 @@ class NNPackOpsTest(hu.HypothesisTestCase):
         order = "NCHW"
         times = {}
         for engine in ["", "NNPACK"]:
-            net = core.Net(engine + "_test")
+            net = core.Net(f"{engine}_test")
             net.Conv(
                 ["X", "W", "b"], "Y",
                 order=order,

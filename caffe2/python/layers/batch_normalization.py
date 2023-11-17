@@ -45,16 +45,16 @@ class BatchNormalization(ModelLayer):
 
         self.output_schema = schema.Scalar(
             (np.float32, self.input_shape),
-            model.net.NextScopedBlob(name + '_output')
+            model.net.NextScopedBlob(f'{name}_output'),
         )
 
         self.momentum = momentum
         self.order = order
 
-        self.scale = model.net.NextScopedBlob(name + "_scale")
-        self.bias = model.net.NextScopedBlob(name + "_bias")
-        self.rm = model.net.NextScopedBlob(name + "_running_mean")
-        self.riv = model.net.NextScopedBlob(name + "_running_inv_var")
+        self.scale = model.net.NextScopedBlob(f"{name}_scale")
+        self.bias = model.net.NextScopedBlob(f"{name}_bias")
+        self.rm = model.net.NextScopedBlob(f"{name}_running_mean")
+        self.riv = model.net.NextScopedBlob(f"{name}_running_inv_var")
 
         self.params.append(
             LayerParameter(

@@ -51,15 +51,16 @@ class RecordQueue(object):
     """
     def __init__(self, fields, name=None, capacity=1,
                  enforce_unique_name=False, num_threads=1):
-        assert isinstance(fields, list) or isinstance(fields, Struct), (
-            'fields must be either a Struct or a list of raw field names.')
+        assert isinstance(
+            fields, (list, Struct)
+        ), 'fields must be either a Struct or a list of raw field names.'
         if isinstance(fields, list):
             fields = from_column_list(fields)
         self.schema = fields
         self.name = name or 'queue'
         self.num_threads = num_threads
         num_blobs = len(self.schema.field_names())
-        init_net = core.Net(self.name + '/init_net')
+        init_net = core.Net(f'{self.name}/init_net')
         self.blobs_queue = init_net.CreateBlobsQueue(
             [], 1,
             capacity=capacity,
@@ -68,14 +69,12 @@ class RecordQueue(object):
         core.workspace.RunNetOnce(init_net)
 
         self.writer = _QueueWriter(self.blobs_queue, self.schema)
-        reader_name = self.name + '_reader'
+        reader_name = f'{self.name}_reader'
         self.reader = _QueueReader(self.blobs_queue, self.schema, reader_name)
 
-        exit_net = core.Net(self.name + '/exit_net')
+        exit_net = core.Net(f'{self.name}/exit_net')
         exit_net.CloseBlobsQueue(self.blobs_queue, 0)
-        self.exit_step = core.execution_step(
-            '{}_close_step'.format(str(exit_net)),
-            exit_net)
+        self.exit_step = core.execution_step(f'{str(exit_net)}_close_step', exit_net)
 
     def build(self, reader, process=None):
         """
@@ -93,12 +92,12 @@ class RecordQueue(object):
         """
         producer_steps = []
         for i in range(self.num_threads):
-            name = 'reader_' + str(i)
+            name = f'reader_{str(i)}'
             net_reader = core.Net(name)
             should_stop, fields = reader.read_record(net_reader)
             step_read = core.execution_step(name, net_reader)
 
-            name = 'queue_writer' + str(i)
+            name = f'queue_writer{str(i)}'
             net_prod = core.Net(name)
             field_blobs = fields.field_blobs()
             if process:
@@ -107,9 +106,10 @@ class RecordQueue(object):
             self.writer.write(net_prod, field_blobs)
             step_prod = core.execution_step(name, net_prod)
             step = core.execution_step(
-                'producer_' + str(i),
+                f'producer_{str(i)}',
                 [step_read, step_prod],
-                should_stop_blob=should_stop)
+                should_stop_blob=should_stop,
+            )
             producer_steps.append(step)
         producer_step = core.execution_step(
             'producers',

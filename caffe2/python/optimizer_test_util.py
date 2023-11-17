@@ -40,7 +40,7 @@ class OptimizerTestBase(object):
             WeightInitializer=initializer, BiasInitializer=initializer
         )
         if dtype == core.DataType.FLOAT16:
-            out = model.HalfToFloat(out, out + "_fp32")
+            out = model.HalfToFloat(out, f"{out}_fp32")
         sq = model.SquaredL2Distance([out, 'label'])
         loss = model.AveragedLoss(sq, "avg_loss")
         grad_map = model.AddGradientOperators([loss])

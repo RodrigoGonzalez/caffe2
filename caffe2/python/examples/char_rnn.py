@@ -47,11 +47,12 @@ class CharRNN(object):
 
         self.vocab = list(set(self.text))
         self.char_to_idx = {ch: idx for idx, ch in enumerate(self.vocab)}
-        self.idx_to_char = {idx: ch for idx, ch in enumerate(self.vocab)}
+        self.idx_to_char = dict(enumerate(self.vocab))
         self.D = len(self.char_to_idx)
 
-        print("Input has {} characters. Total input size: {}".format(
-            len(self.vocab), len(self.text)))
+        print(
+            f"Input has {len(self.vocab)} characters. Total input size: {len(self.text)}"
+        )
 
     def CreateModel(self):
         log.debug("Start training")
@@ -122,7 +123,6 @@ class CharRNN(object):
 
         # As though we predict the same probability for each character
         smooth_loss = -np.log(1.0 / self.D) * self.seq_length
-        last_n_iter = 0
         last_n_loss = 0.0
         num_iter = 0
         N = len(self.text)
@@ -150,6 +150,7 @@ class CharRNN(object):
         # seq_length segment and feed it to LSTM as a sequence
         last_time = datetime.now()
         progress = 0
+        last_n_iter = 0
         while True:
             workspace.FeedBlob(
                 "seq_lengths",
@@ -170,7 +171,7 @@ class CharRNN(object):
                     pos = text_block_starts[e] + text_block_positions[e]
                     input[i][e][self._idx_at_pos(pos)] = 1
                     target[i * self.batch_size + e] =\
-                        self._idx_at_pos((pos + 1) % N)
+                            self._idx_at_pos((pos + 1) % N)
                     text_block_positions[e] = (
                         text_block_positions[e] + 1) % text_block_sizes[e]
                     progress += 1
@@ -186,19 +187,17 @@ class CharRNN(object):
 
             if num_iter % self.iters_to_report == 0:
                 new_time = datetime.now()
-                print("Characters Per Second: {}". format(
-                    int(progress / (new_time - last_time).total_seconds())
-                ))
-                print("Iterations Per Second: {}". format(
-                    int(self.iters_to_report /
-                        (new_time - last_time).total_seconds())
-                ))
+                print(
+                    f"Characters Per Second: {int(progress / (new_time - last_time).total_seconds())}"
+                )
+                print(
+                    f"Iterations Per Second: {int(self.iters_to_report / (new_time - last_time).total_seconds())}"
+                )
 
                 last_time = new_time
                 progress = 0
 
-                print("{} Iteration {} {}".
-                      format('-' * 10, num_iter, '-' * 10))
+                print(f"{'-' * 10} Iteration {num_iter} {'-' * 10}")
 
             loss = workspace.FetchBlob(self.loss) * self.seq_length
             smooth_loss = 0.999 * smooth_loss + 0.001 * loss
@@ -207,9 +206,8 @@ class CharRNN(object):
             if num_iter % self.iters_to_report == 0:
                 self.GenerateText(500, np.random.choice(self.vocab))
 
-                log.debug("Loss since last report: {}"
-                          .format(last_n_loss / last_n_iter))
-                log.debug("Smooth loss: {}".format(smooth_loss))
+                log.debug(f"Loss since last report: {last_n_loss / last_n_iter}")
+                log.debug(f"Smooth loss: {smooth_loss}")
 
                 last_n_loss = 0.0
                 last_n_iter = 0
@@ -221,7 +219,7 @@ class CharRNN(object):
         # Same character becomes part of the output
         CreateNetOnce(self.forward_net)
 
-        text = '' + ch
+        text = f'{ch}'
         for _i in range(num_characters):
             workspace.FeedBlob(
                 "seq_lengths", np.array([1] * self.batch_size, dtype=np.int32))

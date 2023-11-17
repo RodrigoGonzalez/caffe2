@@ -30,65 +30,84 @@ class SparseToDense(ModelLayer):
         outputs = []
         for field, feature_specs in self.input_specs:
             assert len(feature_specs.feature_names) ==\
-                len(feature_specs.feature_ids)
+                    len(feature_specs.feature_ids)
             if feature_specs.feature_type == 'FLOAT':
-                outputs.append((
-                    field,
-                    schema.Scalar(
-                        (np.float32, (len(feature_specs.feature_ids), )),
-                        model.net.NextScopedBlob(name + '_' + field + '_output')
+                outputs.append(
+                    (
+                        field,
+                        schema.Scalar(
+                            (np.float32, (len(feature_specs.feature_ids),)),
+                            model.net.NextScopedBlob(f'{name}_{field}_output'),
+                        ),
                     )
-                ))
+                )
             elif feature_specs.feature_type == 'ID_LIST':
-                outputs.append((
-                    field,
-                    schema.Struct(
-                        ('ranges',
-                            schema.Scalar(
-                                (
-                                    np.int32,
-                                    (len(feature_specs.feature_ids), 2)
+                outputs.append(
+                    (
+                        field,
+                        schema.Struct(
+                            (
+                                'ranges',
+                                schema.Scalar(
+                                    (
+                                        np.int32,
+                                        (len(feature_specs.feature_ids), 2),
+                                    ),
+                                    model.net.NextScopedBlob(
+                                        f'{name}_{field}_ranges'
+                                    ),
                                 ),
-                                model.net.NextScopedBlob(
-                                    name + '_' + field + '_ranges')
                             ),
-                         ),
-                        ('values',
-                         schema.Scalar(np.int64,
-                                       model.net.NextScopedBlob(
-                                           name + '_' + field + '_values')
-                                       ),
-                         )
+                            (
+                                'values',
+                                schema.Scalar(
+                                    np.int64,
+                                    model.net.NextScopedBlob(
+                                        f'{name}_{field}_values'
+                                    ),
+                                ),
+                            ),
+                        ),
                     )
-                ))
+                )
             elif feature_specs.feature_type == 'ID_SCORE_LIST':
-                outputs.append((
-                    field,
-                    schema.Struct(
-                        ('ranges',
-                            schema.Scalar(
-                                (
-                                    np.int32,
-                                    (len(feature_specs.feature_ids), 2)
+                outputs.append(
+                    (
+                        field,
+                        schema.Struct(
+                            (
+                                'ranges',
+                                schema.Scalar(
+                                    (
+                                        np.int32,
+                                        (len(feature_specs.feature_ids), 2),
+                                    ),
+                                    model.net.NextScopedBlob(
+                                        f'{name}_{field}_ranges'
+                                    ),
                                 ),
-                                model.net.NextScopedBlob(
-                                    name + '_' + field + '_ranges')
                             ),
-                         ),
-                        ('ids',
-                         schema.Scalar(np.int64,
-                                       model.net.NextScopedBlob(
-                                           name + '_' + field + '_ids')
-                                       ),
-                         ),
-                        ('scores',
-                         schema.Scalar(np.float32,
-                                       model.net.NextScopedBlob(
-                                           name + '_' + field + '_scores')
-                                       ),
-                         )
+                            (
+                                'ids',
+                                schema.Scalar(
+                                    np.int64,
+                                    model.net.NextScopedBlob(
+                                        f'{name}_{field}_ids'
+                                    ),
+                                ),
+                            ),
+                            (
+                                'scores',
+                                schema.Scalar(
+                                    np.float32,
+                                    model.net.NextScopedBlob(
+                                        f'{name}_{field}_scores'
+                                    ),
+                                ),
+                            ),
+                        ),
                     )
-                ))
+                )
             else:
                 raise TypeError(
                     "Unsupported input type: {0}".

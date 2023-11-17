@@ -134,11 +134,12 @@ class SgdOptimizer(Optimizer):
         # below.
         lr_sign = -1 if self.momentum else 1
         lr, _ = self.build_lr(
-            net, param_init_net,
+            net,
+            param_init_net,
             base_learning_rate=self.base_learning_rate * lr_sign,
-            learning_rate_blob=str(param) + "_lr",
+            learning_rate_blob=f"{str(param)}_lr",
             policy=self.policy,
-            **(self.init_kwargs)
+            **(self.init_kwargs),
         )
 
         dev = scope.CurrentDeviceScope()
@@ -148,17 +149,15 @@ class SgdOptimizer(Optimizer):
         # Each GPU/CPU must have its own ONE blob, thus modify the name
         # to include device information.
         ONE = param_init_net.ConstantFill(
-            [],
-            "ONE_{}_{}".format(dev.device_type, dev.cuda_gpu_id),
-            shape=[1],
-            value=1.0
+            [], f"ONE_{dev.device_type}_{dev.cuda_gpu_id}", shape=[1], value=1.0
         )
 
         self._aux_params.shared.append(ONE)
 
         if self.momentum > 0:
             momentum_data = param_init_net.ConstantFill(
-                param, str(param) + "_momentum", value=0.)
+                param, f"{str(param)}_momentum", value=0.0
+            )
             self._aux_params.local.append(momentum_data)
 
         if isinstance(grad, core.GradientSlice):
@@ -167,20 +166,19 @@ class SgdOptimizer(Optimizer):
                 [param, ONE, grad.indices, grad.values, lr],
                 param
             )
+        elif self.momentum > 0.:
+            net.MomentumSGDUpdate(
+                [grad, momentum_data, lr, param],
+                [grad, momentum_data, param],
+                momentum=self.momentum,
+                nesterov=self.nesterov)
         else:
-            if self.momentum > 0.:
-                net.MomentumSGDUpdate(
-                    [grad, momentum_data, lr, param],
-                    [grad, momentum_data, param],
-                    momentum=self.momentum,
-                    nesterov=self.nesterov)
-            else:
-                coeff = lr
+            coeff = lr
 
-                net.WeightedSum(
-                    [param, ONE, grad, coeff],
-                    param
-                )
+            net.WeightedSum(
+                [param, ONE, grad, coeff],
+                param
+            )
 
     def scale_learning_rate(self, scale):
         self.base_learning_rate *= scale
@@ -200,10 +198,10 @@ class MultiPrecisionSgdOptimizer(SgdOptimizer):
     def _run(self, net, param_init_net, param_info):
         param = param_info.blob
         param_fp32 = param_info.blob_copy[core.DataType.FLOAT] \
-                if param_info.blob_copy is not None else None
+                    if param_info.blob_copy is not None else None
 
         # If we have a straight fp32 parameter, run the base class
-        if param_fp32 == None:
+        if param_fp32 is None:
             return SgdOptimizer._run(self, net, param_init_net, param_info)
 
         grad = param_info.grad
@@ -212,22 +210,24 @@ class MultiPrecisionSgdOptimizer(SgdOptimizer):
         assert self.base_learning_rate > 0
 
         lr, _ = self.build_lr(
-            net, param_init_net,
+            net,
+            param_init_net,
             base_learning_rate=-self.base_learning_rate,
-            learning_rate_blob=param + "_lr",
+            learning_rate_blob=f"{param}_lr",
             policy=self.policy,
-            **(self.init_kwargs)
+            **(self.init_kwargs),
         )
 
         momentum_data = param_init_net.ConstantFill(
-            param_fp32, str(param) + "_momentum", value=0.)
+            param_fp32, f"{str(param)}_momentum", value=0.0
+        )
         self._aux_params.local.append(momentum_data)
 
         assert not isinstance(grad, core.GradientSlice), \
-                "Doesn't support sparse gradients"
+                    "Doesn't support sparse gradients"
 
         # Copy gradient to fp32
-        grad_fp32 = net.HalfToFloat(grad, grad + "_fp32")
+        grad_fp32 = net.HalfToFloat(grad, f"{grad}_fp32")
 
         # update (fused) in fp32
         net.MomentumSGDUpdate(
@@ -250,14 +250,13 @@ class WeightDecayBuilder(Optimizer):
             dev = core.DeviceOption(caffe2_pb2.CPU)
 
         ONE = param_init_net.ConstantFill(
-            [],
-            "ONE_{}_{}".format(dev.device_type, dev.cuda_gpu_id),
-            shape=[1],
-            value=1.0
+            [], f"ONE_{dev.device_type}_{dev.cuda_gpu_id}", shape=[1], value=1.0
         )
         WD = param_init_net.ConstantFill(
-            [], "wd_{}_{}".format(dev.device_type, dev.cuda_gpu_id),
-            shape=[1], value=self.weight_decay
+            [],
+            f"wd_{dev.device_type}_{dev.cuda_gpu_id}",
+            shape=[1],
+            value=self.weight_decay,
         )
 
         if isinstance(param_info.grad, core.GradientSlice):
@@ -288,17 +287,16 @@ class AdagradOptimizer(Optimizer):
             return
 
         lr, _ = self.build_lr(
-            net, param_init_net,
+            net,
+            param_init_net,
             base_learning_rate=self.alpha,
-            learning_rate_blob=str(param) + "_lr",
+            learning_rate_blob=f"{str(param)}_lr",
             policy=self.policy,
-            **(self.init_kwargs)
+            **(self.init_kwargs),
         )
 
         param_squared_sum = param_init_net.ConstantFill(
-            [param],
-            str(param) + "_squared_sum",
-            value=0.0
+            [param], f"{str(param)}_squared_sum", value=0.0
         )
         self._aux_params.local.append(param_squared_sum)
 
@@ -342,10 +340,7 @@ class FtrlOptimizer(Optimizer):
             return
 
         nz = param_init_net.ConstantFill(
-            [param],
-            str(param) + "_ftrl_nz",
-            extra_shape=[2],
-            value=0.0
+            [param], f"{str(param)}_ftrl_nz", extra_shape=[2], value=0.0
         )
         self._aux_params.local.append(nz)
         if isinstance(grad, core.GradientSlice):
@@ -397,23 +392,16 @@ class AdamOptimizer(Optimizer):
             return
 
         lr, iteration = self.build_lr(
-            net, param_init_net,
+            net,
+            param_init_net,
             base_learning_rate=self.alpha,
-            learning_rate_blob=str(param) + "_lr",
+            learning_rate_blob=f"{str(param)}_lr",
             policy=self.policy,
-            **(self.init_kwargs)
+            **(self.init_kwargs),
         )
 
-        m1 = param_init_net.ConstantFill(
-            [param],
-            param + "_first_moment",
-            value=0.0
-        )
-        m2 = param_init_net.ConstantFill(
-            [param],
-            param + "_second_moment",
-            value=0.0
-        )
+        m1 = param_init_net.ConstantFill([param], f"{param}_first_moment", value=0.0)
+        m2 = param_init_net.ConstantFill([param], f"{param}_second_moment", value=0.0)
         self._aux_params.shared.append(iteration)
         self._aux_params.local.append(m1)
         self._aux_params.local.append(m2)
@@ -467,20 +455,20 @@ def _build(model, optimizer, weights_only=False):
         device = None
         if param_name in param_to_device:
             device = param_to_device[param_name]
+        elif isinstance(param_info.grad, core.GradientSlice):
+            grad = param_info.grad
+            if str(grad.values) in param_to_device:
+                device = param_to_device[str(grad.values)]
+            elif str(grad.indices) in param_to_device:
+                device = param_to_device[str(grad.indices)]
         else:
-            if isinstance(param_info.grad, core.GradientSlice):
-                grad = param_info.grad
-                if str(grad.values) in param_to_device:
-                    device = param_to_device[str(grad.values)]
-                elif str(grad.indices) in param_to_device:
-                    device = param_to_device[str(grad.indices)]
-            else:
-                grad_name = str(param_info.grad)
-                if grad_name in param_to_device:
-                    device = param_to_device[grad_name]
+            grad_name = str(param_info.grad)
+            if grad_name in param_to_device:
+                device = param_to_device[grad_name]
 
-        assert device is not None,\
-            "Cannot infer device for {}: no op creates it".format(param_name)
+        assert (
+            device is not None
+        ), f"Cannot infer device for {param_name}: no op creates it"
 
         with core.DeviceScope(device):
             optimizer(model.net, model.param_init_net, param_info)

@@ -12,24 +12,23 @@ class TestMuji(test_util.TestCase):
         for id in gpu_ids:
             net.ConstantFill(
                 [],
-                "testblob_gpu_" + str(id),
+                f"testblob_gpu_{str(id)}",
                 shape=[1, 2, 3, 4],
                 value=float(id + 1),
-                device_option=muji.OnGPU(id)
+                device_option=muji.OnGPU(id),
             )
         allreduce_function(
-            net, ["testblob_gpu_" + str(i)
-                  for i in gpu_ids], "_reduced", gpu_ids
+            net, [f"testblob_gpu_{str(i)}" for i in gpu_ids], "_reduced", gpu_ids
         )
         workspace.RunNetOnce(net)
         target_value = sum(gpu_ids) + len(gpu_ids)
         all_blobs = workspace.Blobs()
         all_blobs.sort()
         for blob in all_blobs:
-            print('{} {}'.format(blob, workspace.FetchBlob(blob)))
+            print(f'{blob} {workspace.FetchBlob(blob)}')
 
         for idx in gpu_ids:
-            blob = workspace.FetchBlob("testblob_gpu_" + str(idx) + "_reduced")
+            blob = workspace.FetchBlob(f"testblob_gpu_{str(idx)}_reduced")
             np.testing.assert_array_equal(
                 blob,
                 target_value,

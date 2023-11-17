@@ -25,8 +25,7 @@ class OptimizerContext(object):
             self._optimizers.update(m)
 
     def get_optimizer(self, name):
-        assert name in self._optimizers, (
-            "{} optimizer is not provided!".format(name))
+        assert name in self._optimizers, f"{name} optimizer is not provided!"
         return self._optimizers.get(name)
 
     def push_optimizers(self, optimizers):

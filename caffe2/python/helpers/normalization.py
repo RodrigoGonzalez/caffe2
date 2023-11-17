@@ -19,7 +19,7 @@ def lrn(model, blob_in, blob_out, order="NCHW", use_cudnn=False, **kwargs):
         kwargs['engine'] = 'CUDNN'
         blobs_out = blob_out
     else:
-        blobs_out = [blob_out, "_" + blob_out + "_scale"]
+        blobs_out = [blob_out, f"_{blob_out}_scale"]
     lrn = model.net.LRN(
         blob_in,
         blobs_out,
@@ -27,10 +27,7 @@ def lrn(model, blob_in, blob_out, order="NCHW", use_cudnn=False, **kwargs):
         **kwargs
     )
 
-    if use_cudnn and (not is_cpu):
-        return lrn
-    else:
-        return lrn[0]
+    return lrn if use_cudnn and (not is_cpu) else lrn[0]
 
 
 def softmax(model, blob_in, blob_out=None, use_cudnn=False, **kwargs):
@@ -52,12 +49,14 @@ def instance_norm(model, blob_in, blob_out, dim_in, order="NCHW", **kwargs):
 
     def init_blob(value, suffix):
         return model.param_init_net.ConstantFill(
-            [], blob_out + "_" + suffix, shape=[dim_in], value=value)
+            [], f"{blob_out}_{suffix}", shape=[dim_in], value=value
+        )
+
     scale, bias = init_blob(1.0, "s"), init_blob(0.0, "b")
 
     model.AddParameter(scale, ParameterTags.WEIGHT)
     model.AddParameter(bias, ParameterTags.BIAS)
-    blob_outs = [blob_out, blob_out + "_sm", blob_out + "_siv"]
+    blob_outs = [blob_out, f"{blob_out}_sm", f"{blob_out}_siv"]
     if 'is_test' in kwargs and kwargs['is_test']:
         blob_outputs = model.net.InstanceNorm(
             [blob_in, scale, bias], [blob_out],
@@ -83,29 +82,33 @@ def spatial_bn(model, blob_in, blob_out, dim_in, order="NCHW", **kwargs):
 
     def init_blob(value, suffix):
         return model.param_init_net.ConstantFill(
-            [], blob_out + "_" + suffix, shape=[dim_in], value=value)
+            [], f"{blob_out}_{suffix}", shape=[dim_in], value=value
+        )
 
     if model.init_params:
         scale, bias = init_blob(1.0, "s"), init_blob(0.0, "b")
         running_mean = init_blob(0.0, "rm")
         running_inv_var = init_blob(1.0, "riv")
     else:
-        scale = core.ScopedBlobReference(
-            blob_out + '_s', model.param_init_net)
-        bias = core.ScopedBlobReference(
-            blob_out + '_b', model.param_init_net)
-        running_mean = core.ScopedBlobReference(
-            blob_out + '_rm', model.param_init_net)
+        scale = core.ScopedBlobReference(f'{blob_out}_s', model.param_init_net)
+        bias = core.ScopedBlobReference(f'{blob_out}_b', model.param_init_net)
+        running_mean = core.ScopedBlobReference(f'{blob_out}_rm', model.param_init_net)
         running_inv_var = core.ScopedBlobReference(
-            blob_out + '_riv', model.param_init_net)
+            f'{blob_out}_riv', model.param_init_net
+        )
 
     model.AddParameter(running_mean, ParameterTags.COMPUTED_PARAM)
     model.AddParameter(running_inv_var, ParameterTags.COMPUTED_PARAM)
     model.AddParameter(scale, ParameterTags.WEIGHT)
     model.AddParameter(bias, ParameterTags.BIAS)
 
-    blob_outs = [blob_out, running_mean, running_inv_var,
-                 blob_out + "_sm", blob_out + "_siv"]
+    blob_outs = [
+        blob_out,
+        running_mean,
+        running_inv_var,
+        f"{blob_out}_sm",
+        f"{blob_out}_siv",
+    ]
     if 'is_test' in kwargs and kwargs['is_test']:
         blob_outputs = model.net.SpatialBN(
             [blob_in, scale, bias, blob_outs[1], blob_outs[2]], [blob_out],

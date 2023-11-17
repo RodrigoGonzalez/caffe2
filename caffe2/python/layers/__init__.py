@@ -16,9 +16,9 @@ def import_recursive(package):
     pkg_dir = package.__path__
     module_location = package.__name__
     for (module_loader, name, ispkg) in pkgutil.iter_modules(pkg_dir):
-        module_name = "{}.{}".format(module_location, name)  # Module/package
-        module = import_module(module_name)
+        module_name = f"{module_location}.{name}"
         if ispkg:
+            module = import_module(module_name)
             import_recursive(module)
 
 import_recursive(sys.modules[__name__])

@@ -134,5 +134,4 @@ class TestCRFOp(hu.HypothesisTestCase):
         binary_scores = sum(
             transitions[a][b] for a, b in zip(labels[:-1], labels[1:])
         )
-        loss = total_score - (binary_scores + unary_scores)
-        return loss
+        return total_score - (binary_scores + unary_scores)

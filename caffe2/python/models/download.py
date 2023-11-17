@@ -96,10 +96,9 @@ def downloadModel(model, args):
         if not args.force:
             raise Exception("Cannot create folder for storing the model,\
                             there exists a file of the same name.")
-        else:
-            print("Overwriting existing file! ({filename})"
-                  .format(filename=model_folder))
-            os.remove(model_folder)
+        print("Overwriting existing file! ({filename})"
+              .format(filename=model_folder))
+        os.remove(model_folder)
     if os.path.isdir(model_folder):
         if not args.force:
             response = ""
@@ -134,11 +133,7 @@ def downloadModel(model, args):
 
 def validModelName(name):
     invalid_names = ['__init__']
-    if name in invalid_names:
-        return False
-    if not re.match("^[a-zA-Z_]+$", name):
-        return False
-    return True
+    return False if name in invalid_names else bool(re.match("^[a-zA-Z_]+$", name))
 
 
 if __name__ == "__main__":

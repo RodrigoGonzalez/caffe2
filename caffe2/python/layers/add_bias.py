@@ -24,19 +24,20 @@ class AddBias(ModelLayer):
             "AddBias expects limited dimensions of the input tensor")
 
         input_dims = input_record.field_type().shape[0]
-        assert input_dims > 0, (
-            "AddBias expects input dimensions > 0, got {}".format(input_dims))
+        assert (
+            input_dims > 0
+        ), f"AddBias expects input dimensions > 0, got {input_dims}"
 
         self.output_schema = schema.Scalar(
-            (input_record.field_type().base, (input_dims, )),
-            model.net.NextScopedBlob(name + '_output')
+            (input_record.field_type().base, (input_dims,)),
+            model.net.NextScopedBlob(f'{name}_output'),
         )
 
         scale = math.sqrt(1.0 / input_dims)
         bias_init = bias_init if bias_init else (
             'UniformFill', {'min': -scale, 'max': scale})
 
-        self.b = model.net.NextScopedBlob(name + "_b")
+        self.b = model.net.NextScopedBlob(f"{name}_b")
 
         self.params.append(
             LayerParameter(

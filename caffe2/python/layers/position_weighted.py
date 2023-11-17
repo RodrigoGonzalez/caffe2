@@ -24,7 +24,7 @@ class PositionWeighted(ModelLayer):
         # cardinality from run_meta
         self.shape = 1000
 
-        self.pos_w = model.net.NextScopedBlob(name + "_pos_w")
+        self.pos_w = model.net.NextScopedBlob(f"{name}_pos_w")
         self.params.append(
             LayerParameter(
                 parameter=self.pos_w,
@@ -38,9 +38,13 @@ class PositionWeighted(ModelLayer):
             ))
 
         self.output_schema = schema.Struct(
-            ('position_weights',
-                schema.Scalar((np.float32, self.shape),
-                              model.net.NextScopedBlob(name + "_pos_w_gather")))
+            (
+                'position_weights',
+                schema.Scalar(
+                    (np.float32, self.shape),
+                    model.net.NextScopedBlob(f"{name}_pos_w_gather"),
+                ),
+            )
         )
 
         self.tags.update({Tags.HANDLE_AS_SPARSE_LAYER})
@@ -52,7 +56,7 @@ class PositionWeighted(ModelLayer):
     def add_ops(self, net):
         inc_seq = net.LengthsRangeFill(
             [self.input_record.lengths()],
-            self.input_record.lengths() + '_pos_w_seq'
+            f'{self.input_record.lengths()}_pos_w_seq',
         )
 
         net.Gather(

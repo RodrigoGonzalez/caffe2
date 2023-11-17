@@ -83,10 +83,9 @@ class Session(object):
     @classmethod
     def compile(cls, runnable):
         if isinstance(runnable, CompiledRunnable):
-            assert cls == runnable.session_class, (
-                'Runnable was compiled for different session type. ' +
-                'Need: %s, got: %s' % (
-                    cls.__name__, runnable.session_class.__name__))
+            assert (
+                cls == runnable.session_class
+            ), f'Runnable was compiled for different session type. Need: {cls.__name__}, got: {runnable.session_class.__name__}'
             return runnable
 
         if runnable in cls._compiled_cache:

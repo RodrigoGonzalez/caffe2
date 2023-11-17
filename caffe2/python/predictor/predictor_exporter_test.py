@@ -71,8 +71,7 @@ class PredictorExporterTest(unittest.TestCase):
         )
 
         db_type = 'minidb'
-        db_file = tempfile.NamedTemporaryFile(
-            delete=False, suffix=".{}".format(db_type))
+        db_file = tempfile.NamedTemporaryFile(delete=False, suffix=f".{db_type}")
         pe.save_to_db(
             db_type=db_type,
             db_destination=db_file.name,
@@ -121,8 +120,7 @@ class PredictorExporterTest(unittest.TestCase):
     def test_db_fails_without_params(self):
         with self.assertRaises(Exception):
             for db_type in ["minidb"]:
-                db_file = tempfile.NamedTemporaryFile(
-                    delete=False, suffix=".{}".format(db_type))
+                db_file = tempfile.NamedTemporaryFile(delete=False, suffix=f".{db_type}")
                 pe.save_to_db(
                     db_type=db_type,
                     db_destination=db_file.name,

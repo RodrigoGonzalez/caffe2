@@ -27,9 +27,8 @@ class TestMomentumSGD(hu.HypothesisTestCase):
             adjgrad = lr * grad + momentum * param_momentum
             if param is None:
                 return [adjgrad, adjgrad]
-            else:
-                paramup = param - adjgrad
-                return [adjgrad, adjgrad, paramup]
+            paramup = param - adjgrad
+            return [adjgrad, adjgrad, paramup]
 
         op = core.CreateOperator(
             "MomentumSGDUpdate",
@@ -76,7 +75,7 @@ class TestMomentumSGD(hu.HypothesisTestCase):
             hu.tensor(dtype=np.int64,
                       elements=st.sampled_from(np.arange(grad.shape[0]))),
         )
-        hypothesis.note('indices.shape: %s' % str(indices.shape))
+        hypothesis.note(f'indices.shape: {str(indices.shape)}')
 
         # For now, the indices must be unique
         hypothesis.assume(np.array_equal(np.unique(indices.flatten()),

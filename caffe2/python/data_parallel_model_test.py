@@ -136,7 +136,7 @@ class GPUDataParallelModelTest(TestCase):
         checkpoint_params = data_parallel_model.GetCheckpointParams(model)
         for p in model.GetParams("gpu_1/"):
             self.assertTrue(p in checkpoint_params)
-            self.assertTrue(p + "_momentum" in checkpoint_params)
+            self.assertTrue(f"{p}_momentum" in checkpoint_params)
         for p in model.GetParams("gpu_2/"):
             self.assertFalse(p in checkpoint_params)
         self.assertTrue(
@@ -334,9 +334,7 @@ class SparseDataParallelModelTest(TestCase):
                     model.WeightedSum([param, ONE, param_grad, LR], param)
                 else:
                     param_momentum = model.param_init_net.ConstantFill(
-                        [param],
-                        param + '_momentum',
-                        value=0.0,
+                        [param], f'{param}_momentum', value=0.0
                     )
                     model.net.SparseMomentumSGDUpdate(
                         [
@@ -538,8 +536,8 @@ class ParallelizeGPUBMUFTest(TestCase):
                 data = full_data[st:en, :].astype(np.float32)
                 labels = full_labels[st:en].astype(np.float32)
                 with core.DeviceScope(core.DeviceOption(caffe2_pb2.CUDA, g)):
-                    workspace.FeedBlob("gpu_{}/data".format(g), data)
-                    workspace.FeedBlob("gpu_{}/label".format(g), labels)
+                    workspace.FeedBlob(f"gpu_{g}/data", data)
+                    workspace.FeedBlob(f"gpu_{g}/label", labels)
 
     def test_parallelize_gpu_bmuf(self):
         model = cnn.CNNModelHelper(

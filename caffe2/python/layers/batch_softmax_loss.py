@@ -31,15 +31,17 @@ class BatchSoftmaxLoss(ModelLayer):
 
         self.output_schema = schema.Struct(
             (
-                'softmax', schema.Scalar(
+                'softmax',
+                schema.Scalar(
                     input_record.prediction.field_type(),
-                    model.net.NextScopedBlob(name + '_softmax')
-                )
+                    model.net.NextScopedBlob(f'{name}_softmax'),
+                ),
             ),
             (
-                'loss', schema.Scalar(
-                    np.float32, model.net.NextScopedBlob(name + '_loss')
-                )
+                'loss',
+                schema.Scalar(
+                    np.float32, model.net.NextScopedBlob(f'{name}_loss')
+                ),
             ),
         )
 

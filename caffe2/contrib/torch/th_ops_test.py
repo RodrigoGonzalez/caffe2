@@ -20,7 +20,6 @@ except Exception as e:
     print("Exception loading Torch GPU library: ", e)
     # GPU import can fail, as Torch is not using cuda-lazy
     HAS_GPU = False
-    pass
 
 
 class THOpsTest(hu.HypothesisTestCase):

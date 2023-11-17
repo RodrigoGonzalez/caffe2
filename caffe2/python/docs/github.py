@@ -35,7 +35,7 @@ class GHMarkdown(Markdown):
     def addTable(self, table, noTitle=False):
         self.addLinebreak()
         assert(len(table) > 1)
-        self.addLine(' | '.join(['----------' for i in range(len(table[0]))]))
+        self.addLine(' | '.join(['----------' for _ in range(len(table[0]))]))
         self.addLine(' | '.join(table[0]))
         for row in table[1:]:
             self.addLine(' | '.join(row))

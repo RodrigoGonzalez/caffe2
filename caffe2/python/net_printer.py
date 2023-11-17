@@ -33,8 +33,9 @@ class Visitor(object):
         for Type, func in self.__class__.visitors:
             if isinstance(obj, Type):
                 return func(self, obj, *args, **kwargs)
-        raise TypeError('%s: unsupported object type: %s' % (
-            self.__class__.__name__, type(obj)))
+        raise TypeError(
+            f'{self.__class__.__name__}: unsupported object type: {type(obj)}'
+        )
 
 
 class Analyzer(Visitor):
@@ -68,7 +69,7 @@ class Analyzer(Visitor):
     def need_blob(self, blob):
         if any(blob.startswith(p) for p in Analyzer.PREFIXES_TO_IGNORE):
             return
-        assert blob in self.workspace, 'Blob undefined: %s' % blob
+        assert blob in self.workspace, f'Blob undefined: {blob}'
 
 
 @Analyzer.register(OperatorDef)
@@ -100,9 +101,9 @@ def analyze_step(analyzer, step):
                 analyzer.need_blob(proto.should_stop_blob)
         if proto.concurrent_substeps:
             new_blobs = set(ws_in.keys()) - set(analyzer.workspace.keys())
-            assert len(all_new_blobs & new_blobs) == 0, (
-                'Error: Blobs created by multiple parallel steps: %s' % (
-                    ', '.join(all_new_blobs & new_blobs)))
+            assert (
+                len(all_new_blobs & new_blobs) == 0
+            ), f"Error: Blobs created by multiple parallel steps: {', '.join(all_new_blobs & new_blobs)}"
             all_new_blobs |= new_blobs
     for x in all_new_blobs:
         analyzer.define_blob(x)
@@ -155,7 +156,7 @@ class Text(object):
     @contextmanager
     def context(self, text):
         if text is not None:
-            self.add('with %s:' % text)
+            self.add(f'with {text}:')
             self._indent += 4
             self._lines_in_context.append(0)
         yield
@@ -196,9 +197,7 @@ def _arg_val(arg):
         return str(list(arg.floats))
     if arg.ints:
         return str(list(arg.ints))
-    if arg.strings:
-        return str([_sanitize_str(s) for s in arg.strings])
-    return '[]'
+    return str([_sanitize_str(s) for s in arg.strings]) if arg.strings else '[]'
 
 
 def commonprefix(m):
@@ -207,17 +206,14 @@ def commonprefix(m):
         return ''
     s1 = min(m)
     s2 = max(m)
-    for i, c in enumerate(s1):
-        if c != s2[i]:
-            return s1[:i]
-    return s1
+    return next((s1[:i] for i, c in enumerate(s1) if c != s2[i]), s1)
 
 
 def factor_prefix(vals, do_it):
     vals = [str(v) for v in vals]
     prefix = commonprefix(vals) if len(vals) > 1 and do_it else ''
     joined = ', '.join(v[len(prefix):] for v in vals)
-    return '%s[%s]' % (prefix, joined) if prefix else joined
+    return f'{prefix}[{joined}]' if prefix else joined
 
 
 def call(op, inputs=None, outputs=None, factor_prefixes=False):
@@ -234,9 +230,12 @@ def call(op, inputs=None, outputs=None, factor_prefixes=False):
             )
             if x
         )
-    call = '%s(%s)' % (op, inputs)
-    return call if not outputs else '%s = %s' % (
-        factor_prefix(outputs, factor_prefixes), call)
+    call = f'{op}({inputs})'
+    return (
+        call
+        if not outputs
+        else f'{factor_prefix(outputs, factor_prefixes)} = {call}'
+    )
 
 
 @Printer.register(OperatorDef)
@@ -250,7 +249,7 @@ def print_op(text, op):
 
 @Printer.register(Net)
 def print_net(text, net):
-    text.add('# net: %s' % str(net))
+    text.add(f'# net: {str(net)}')
     for op in net.Proto().op:
         text(op)
 
@@ -261,12 +260,9 @@ def _get_step_context(step):
         return call('loop'), False
     if proto.num_iter and proto.num_iter != 1:
         return call('loop', [proto.num_iter]), False
-    concurrent = proto.concurrent_substeps and len(step.Substeps()) > 1
-    if concurrent:
+    if concurrent := proto.concurrent_substeps and len(step.Substeps()) > 1:
         return call('parallel'), True
-    if proto.report_net:
-        return call('run_once'), False
-    return None, False
+    return (call('run_once'), False) if proto.report_net else (None, False)
 
 
 @Printer.register(ExecutionStep)

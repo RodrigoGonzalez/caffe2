@@ -30,13 +30,13 @@ class BatchSigmoidCrossEntropyLoss(ModelLayer):
             input_record
         )
         assert input_record.prediction.field_type().shape == \
-            input_record.label.field_type().shape, \
-            "prediction and label must have the same shape"
+                input_record.label.field_type().shape, \
+                "prediction and label must have the same shape"
 
         self.tags.update([Tags.EXCLUDE_FROM_PREDICTION])
 
         self.output_schema = schema.Scalar(
-            (np.float32, tuple()), model.net.NextScopedBlob(name + '_loss')
+            (np.float32, tuple()), model.net.NextScopedBlob(f'{name}_loss')
         )
 
     def add_ops(self, net):

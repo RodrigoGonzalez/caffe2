@@ -22,14 +22,15 @@ def get_predictor_exporter_helper(submodelNetName):
             submodelNetName - name of the model
     """
     stub_net = core.Net(submodelNetName)
-    pred_meta = PredictorExportMeta(predict_net=stub_net,
-                                    parameters=[],
-                                    inputs=[],
-                                    outputs=[],
-                                    shapes=None,
-                                    name=submodelNetName,
-                                    extra_init_net=None)
-    return pred_meta
+    return PredictorExportMeta(
+        predict_net=stub_net,
+        parameters=[],
+        inputs=[],
+        outputs=[],
+        shapes=None,
+        name=submodelNetName,
+        extra_init_net=None,
+    )
 
 
 class PredictorExportMeta(collections.namedtuple(
@@ -195,8 +196,7 @@ def load_from_db(filename, db_type):
         'CreateDB', [],
         [core.BlobReference(predictor_constants.PREDICTOR_DBREADER)],
         db=filename, db_type=db_type)
-    assert workspace.RunOperatorOnce(create_db), (
-        'Failed to create db {}'.format(filename))
+    assert workspace.RunOperatorOnce(create_db), f'Failed to create db {filename}'
 
     # predictor_constants.META_NET_DEF is always stored before the parameters
     load_meta_net_def = core.CreateOperator(
@@ -205,7 +205,7 @@ def load_from_db(filename, db_type):
         [core.BlobReference(predictor_constants.META_NET_DEF)])
     assert workspace.RunOperatorOnce(load_meta_net_def)
 
-    meta_net_def = serde.deserialize_protobuf_struct(
+    return serde.deserialize_protobuf_struct(
         str(workspace.FetchBlob(predictor_constants.META_NET_DEF)),
-        metanet_pb2.MetaNetDef)
-    return meta_net_def
+        metanet_pb2.MetaNetDef,
+    )

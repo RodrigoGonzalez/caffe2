@@ -90,7 +90,7 @@ class ModelHelper(object):
             self.params = param_model.params
             self._computed_params = param_model._computed_params
         else:
-            self.param_init_net = core.Net(name + '_init')
+            self.param_init_net = core.Net(f'{name}_init')
             self.param_to_grad = {}
             self.params = []
             self._computed_params = []
@@ -133,8 +133,7 @@ class ModelHelper(object):
         assert len(self._param_info_deprecated) <= len(self.params)
         for param in self.params[len(self._param_info_deprecated):]:
             if not isinstance(param, core.BlobReference):
-                raise ValueError(
-                    "Param %s must be a BlobReference!" % str(param))
+                raise ValueError(f"Param {str(param)} must be a BlobReference!")
             self._param_info_deprecated.append(parameter_info.ParameterInfo(
                 param_id=len(self._param_info_deprecated),
                 param=param,
@@ -205,8 +204,9 @@ class ModelHelper(object):
         return param_info.blob
 
     def get_param_info(self, param):
-        assert isinstance(param, core.BlobReference), \
-            "Param {} is not a BlobReference".format(param)
+        assert isinstance(
+            param, core.BlobReference
+        ), f"Param {param} is not a BlobReference"
         return self._parameters_info.get(param, None)
 
     # This method is deprecated, use create_param method which
@@ -220,7 +220,7 @@ class ModelHelper(object):
             key = self.net.input_record().field_names()[idx]
         shape = shape if shape is not None else self._infer_param_shape(param)
         if not isinstance(param, core.BlobReference):
-            raise ValueError("Param %s must be a BlobReference!" % str(param))
+            raise ValueError(f"Param {str(param)} must be a BlobReference!")
         self._param_info_deprecated.append(parameter_info.ParameterInfo(
             param_id=len(self._param_info_deprecated),
             param=param,
@@ -249,10 +249,7 @@ class ModelHelper(object):
     def AddParameter(self, param, tags=None):
         assert isinstance(param, core.BlobReference)
         tags = tags or []
-        if isinstance(tags, list):
-            tags = set(tags)
-        else:
-            tags = set([tags])
+        tags = set(tags) if isinstance(tags, list) else {tags}
         if parameter_info.ParameterTags.COMPUTED_PARAM in tags:
             self._computed_params.append(param)
         else:
@@ -280,14 +277,11 @@ class ModelHelper(object):
 
         if namescope == '':
             return self.params[:]
-        elif top_scope:
+        else:
             return [
                 p for p in self.params
                 if p.GetNameScope().startswith(namescope)
             ]
-        else:
-            return [p for p in self.params if
-                    p.GetNameScope().startswith(namescope)]
 
     def Proto(self):
         return self.net.Proto()
@@ -300,9 +294,9 @@ class ModelHelper(object):
         self.net.RunAllOnGPU(*args, **kwargs)
 
     def CreateDB(self, blob_out, db, db_type, **kwargs):
-        dbreader = self.param_init_net.CreateDB(
-            [], blob_out, db=db, db_type=db_type, **kwargs)
-        return dbreader
+        return self.param_init_net.CreateDB(
+            [], blob_out, db=db, db_type=db_type, **kwargs
+        )
 
     def AddGradientOperators(self, *args, **kwargs):
         if self.gradient_ops_added:
@@ -316,8 +310,7 @@ class ModelHelper(object):
         # Populate ParameterInfo for all parameters if missing
         # and add gradient blob information. So optimizers can use it
         for param, grad in self.param_to_grad.items():
-            param_info = self.get_param_info(param)
-            if param_info:
+            if param_info := self.get_param_info(param):
                 param_info.grad = grad
             else:
                 self._parameters_info[param] = parameter_info.ParameterInfo(
@@ -334,15 +327,9 @@ class ModelHelper(object):
         to a corresponding gradient
         '''
 
-        param_to_grad = {}
         if not self.gradient_ops_added:
             raise RuntimeError("You need to run AddGradientOperators first.")
-        # We need to use empty namescope when creating the gradients
-        # to prevent duplicating the namescope prefix for gradient blobs.
-        for p in params:
-            if str(p) in self.grad_map:
-                param_to_grad[p] = self.grad_map[str(p)]
-        return param_to_grad
+        return {p: self.grad_map[str(p)] for p in params if str(p) in self.grad_map}
 
     def GetOptimizationParamInfo(self, params=None):
         '''
@@ -383,7 +370,7 @@ class ModelHelper(object):
 
     def Validate(self):
         dupes = self._Validate()
-        assert dupes == [], "Duplicate params: {}".format(dupes)
+        assert dupes == [], f"Duplicate params: {dupes}"
 
     def GetComputedParams(self, namescope=None):
         '''
@@ -407,7 +394,7 @@ class ModelHelper(object):
         self, unused_blob_in, blob_out, batch_size, db, db_type, **kwargs
     ):
         """TensorProtosDBInput."""
-        dbreader_name = "dbreader_" + db
+        dbreader_name = f"dbreader_{db}"
         dbreader = self.param_init_net.CreateDB(
             [], dbreader_name,
             db=db, db_type=db_type)
@@ -426,17 +413,21 @@ class ModelHelper(object):
 
         if not core.IsOperator(op_type):
             raise RuntimeError(
-                'Method ' + op_type + ' is not a registered operator.' +
-                ' Did you mean: [' +
-                ','.join(workspace.C.nearby_opnames(op_type)) + ']'
+                (
+                    (
+                        f'Method {op_type} is not a registered operator. Did you mean: ['
+                        + ','.join(workspace.C.nearby_opnames(op_type))
+                    )
+                    + ']'
+                )
             )
         if op_type not in _known_working_ops:
             if not self.allow_not_known_ops:
-                raise RuntimeError(
-                    "Operator {} is not known to be safe".format(op_type))
+                raise RuntimeError(f"Operator {op_type} is not known to be safe")
 
-            logging.warning("You are creating an op that the ModelHelper "
-                            "does not recognize: {}.".format(op_type))
+            logging.warning(
+                f"You are creating an op that the ModelHelper does not recognize: {op_type}."
+            )
         return self.net.__getattr__(op_type)
 
     def __dir__(self):
@@ -466,7 +457,7 @@ def ExtractPredictorNet(
     @param disabled_inputs optional set of blobs that are 'switched off'. This
                 will cause branches with those blobs as inputs to be removed
     '''
-    predict_net = core.Net(net_proto.name + "_predict")
+    predict_net = core.Net(f"{net_proto.name}_predict")
     predict_proto = predict_net.Proto()
 
     orig_external_inputs = set(net_proto.external_input)
@@ -488,20 +479,18 @@ def ExtractPredictorNet(
     # Find the range of ops that we should include
     try:
         first_op_with_input = min(
-            [
-                j for j in range(len(ops))
-                if input_blobs.intersection(ops[j].input) and ops[j].type !=
-                'StopGradient'
-            ]
+            j
+            for j in range(len(ops))
+            if input_blobs.intersection(ops[j].input)
+            and ops[j].type != 'StopGradient'
         )
     except ValueError:
         raise Exception("No ops with input={}".format(input_blobs))
     try:
         last_op_with_output = max(
-            [
-                j for j in range(len(ops))
-                if output_blobs.intersection(ops[j].output)
-            ]
+            j
+            for j in range(len(ops))
+            if output_blobs.intersection(ops[j].output)
         )
     except ValueError:
         raise Exception("No ops with output={}".format(output_blobs))
